@@ -1,0 +1,34 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      AEGIS_ENVIRONMENT: local
+      AEGIS_DATABASE_URL: sqlite+aiosqlite:///./data/aegis.db
+      AEGIS_CORS_ORIGINS: http://localhost:3000
+      AEGIS_DEMO_TOKEN: ${AEGIS_DEMO_TOKEN:-aegis-local-dev-token}
+      # replay mode needs no API key, so a clean clone runs the demo offline.
+      AEGIS_LLM_MODE: ${AEGIS_LLM_MODE:-replay}
+      AEGIS_GEMINI_API_KEY: ${AEGIS_GEMINI_API_KEY:-}
+    volumes:
+      - aegis-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  aegis-data:

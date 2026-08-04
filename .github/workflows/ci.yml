@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  style:
+    name: Style guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject en dashes and em dashes in tracked files
+        run: |
+          if git grep -n -P '\xe2\x80\x93|\xe2\x80\x94' -- . ; then
+            echo "::error::Found an en dash or em dash. Use a comma, colon, parentheses, or 'to' instead."
+            exit 1
+          fi
+          echo "No en dashes or em dashes found."
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv venv --python 3.12
+      - run: uv pip install -e ".[dev]"
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format check
+        run: uv run ruff format --check .
+      - name: Tests
+        run: uv run pytest -q
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

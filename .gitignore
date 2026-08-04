@@ -1,0 +1,40 @@
+# Local working documents. Never pushed.
+plan.md
+skill.md
+CLAUDE.md
+.claude/
+notes/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+uv.lock
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+AGENTS.md
