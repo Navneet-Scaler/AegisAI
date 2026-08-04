@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from aegis.agent.factory import get_provider
 from aegis.agent.loop import run_agent
-from aegis.config import get_settings
+from aegis.agent.provider import LLMProvider
+from aegis.config import Settings, get_settings
 from aegis.db import get_session
 from aegis.models import AgentSession
 from aegis.tools import registry
@@ -25,6 +26,13 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 class RunRequest(BaseModel):
     request: str
     agent_name: str = "demo-agent"
+    # Only meaningful in mock and replay mode, where the agent's own turns
+    # come from a fixed, reviewable script rather than a live model reading
+    # this field: "refund" (default) always allows, "delete" always holds
+    # via the destructive-delete rule, useful for exercising the approval
+    # flow through the API without a live provider. Live mode ignores this
+    # and lets Gemini decide freely from `request`.
+    scenario: str = "refund"
 
 
 class RunResponse(BaseModel):
@@ -49,7 +57,7 @@ async def run(payload: RunRequest, session: AsyncSession = Depends(get_session))
 
     result = await run_agent(
         user_request=payload.request,
-        provider=get_provider(),
+        provider=_provider_for(settings, payload.scenario),
         tools=registry,
         session=session,
         session_id=session_id,
@@ -64,3 +72,20 @@ async def run(payload: RunRequest, session: AsyncSession = Depends(get_session))
         history=result.history,
         call_ids=result.call_ids,
     )
+
+
+def _provider_for(settings: Settings, scenario: str) -> LLMProvider:
+    """Live mode always uses the cached singleton and ignores `scenario`,
+    since a real model decides its own turns from the request text. Mock and
+    replay mode construct a fresh provider per scenario rather than reusing
+    the cached one, since the cached singleton (also used by the judge
+    layer) is fixed to the default script."""
+    if settings.llm_mode == "mock":
+        from aegis.agent.mock import SCENARIOS, MockProvider
+
+        return MockProvider(SCENARIOS.get(scenario, SCENARIOS["refund"]))
+    if settings.llm_mode == "replay":
+        from aegis.agent.replay import ReplayProvider
+
+        return ReplayProvider(scenario=scenario)
+    return get_provider()

@@ -30,6 +30,14 @@ structural stands between a hijacked agent and the database.
 AegisAI is that structure. It does not ask the agent to behave. It removes the code path
 where misbehaving was possible.
 
+## Who can use this
+
+The repo is public and MIT licensed. Clone it, run it, fork it, or point your own agent's
+tool calls through `AegisAI.guard()` — no account or API key is required to run the full
+demo locally or to read the code. The one thing gated behind the demo token is the
+approve/block action on a held call (`POST /calls/{id}/decide`); everything else, including
+watching the live feed and reading the audit trail, is open.
+
 ## The approach
 
 ```
@@ -197,6 +205,73 @@ primary path documented here, but a plain FastAPI + Docker service, so it works 
 
 Because `AEGIS_LLM_MODE` defaults to `replay`, a deployment needs no Gemini key to run
 the full demo; live judge calls are opt in.
+
+## Example: calling it directly
+
+With the backend running (`docker compose up` or `uv run uvicorn aegis.main:app --reload`),
+here's the whole loop from the terminal, no dashboard needed.
+
+In mock and replay mode (the default, no API key needed) the agent's own turns come from a
+fixed, reviewable script rather than a live model, selected with the `scenario` field:
+`"refund"` (default) always allows, `"delete"` always holds. Live mode (`AEGIS_LLM_MODE=live`)
+ignores `scenario` and lets Gemini decide freely from `request` instead.
+
+**1. Run the refund scenario.** It reads a support ticket, looks up the customer, and issues
+a refund, three tool calls, each passing through `AegisAI.guard()`, all auto allowed:
+
+```bash
+curl -s -X POST http://localhost:8000/agent/run \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Refund the duplicate charge on ticket TCK-4417.", "scenario": "refund"}' \
+  | python3 -m json.tool
+```
+
+```json
+{
+  "session_id": "294c950e-...",
+  "final_answer": "Refunded the duplicate $42.00 charge for Priya Sharma at Acme Corp.",
+  "steps_taken": 3,
+  "stopped_reason": "final_answer",
+  "history": [
+    { "tool_name": "read_ticket", "verdict": "allow", "...": "..." },
+    { "tool_name": "search_customers", "verdict": "allow", "...": "..." },
+    { "tool_name": "create_refund", "verdict": "allow", "...": "..." }
+  ]
+}
+```
+
+**2. Inspect the audit trail**, including the per layer scores AegisAI attached to each call:
+
+```bash
+curl -s http://localhost:8000/calls | python3 -m json.tool
+```
+
+**3. Trigger a held call.** The `delete` scenario always calls `delete_customer`, which
+`seed/rules.yaml`'s `destructive-delete` rule forces to at least hold, regardless of what
+the other two layers say. This request will not return until the call is resolved, run it
+in the background:
+
+```bash
+curl -s -X POST http://localhost:8000/agent/run \
+  -H "Content-Type: application/json" \
+  -d '{"request": "Please remove the requested customer record.", "scenario": "delete"}' &
+```
+
+**4. Approve or block it** with the demo token (`aegis-local-dev-token` locally, from
+`.env.example`), while that request is still waiting:
+
+```bash
+CALL_ID=$(curl -s http://localhost:8000/calls | python3 -c \
+  "import json,sys; print([c for c in json.load(sys.stdin) if c['status']=='pending'][0]['id'])")
+
+curl -s -X POST "http://localhost:8000/calls/$CALL_ID/decide" \
+  -H "Authorization: Bearer aegis-local-dev-token" \
+  -H "Content-Type: application/json" \
+  -d '{"approve": true}'
+```
+
+Approve it once and a similar refund scores lower next time, the pattern layer's weights
+update the moment you send that decision.
 
 ## Demo
 

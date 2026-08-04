@@ -15,24 +15,46 @@ from __future__ import annotations
 from aegis.agent.provider import AgentTurn, JudgeVerdict, ToolCallRequest
 
 
+def _refund_scenario() -> list[ToolCallRequest | str]:
+    return [
+        ToolCallRequest("read_ticket", {"id": "TCK-4417"}),
+        ToolCallRequest("search_customers", {"query": "acme"}),
+        ToolCallRequest(
+            "create_refund",
+            {"customer_id": "CUST-1001", "amount": 42.0, "reason": "duplicate charge"},
+        ),
+        "Refunded the duplicate $42.00 charge for Priya Sharma at Acme Corp.",
+    ]
+
+
+def _delete_scenario() -> list[ToolCallRequest | str]:
+    """Any delete_customer call is forced to at least hold by
+    seed/rules.yaml's destructive-delete rule, regardless of the other two
+    layers. This is the scenario that demonstrates a call actually pausing
+    for a human, reachable through POST /agent/run rather than only in
+    tests."""
+    return [
+        ToolCallRequest("search_customers", {"query": "bright labs"}),
+        ToolCallRequest("delete_customer", {"customer_ids": ["CUST-1002"]}),
+        "Removed the requested customer record.",
+    ]
+
+
+# Named scenarios reachable through POST /agent/run's optional "scenario"
+# field. Not an open-ended interpreter of the request text: the point of the
+# mock provider is to be a fixed, reviewable script, not a second model.
+SCENARIOS: dict[str, list[ToolCallRequest | str]] = {
+    "refund": _refund_scenario(),
+    "delete": _delete_scenario(),
+}
+
+
 class MockProvider:
     """Deterministic step-by-step script, keyed off how many tool results have
     been seen so far. Good enough to exercise the full ReAct loop end to end."""
 
     def __init__(self, script: list[ToolCallRequest | str] | None = None) -> None:
-        self._script = script or self._default_script()
-
-    @staticmethod
-    def _default_script() -> list[ToolCallRequest | str]:
-        return [
-            ToolCallRequest("read_ticket", {"id": "TCK-4417"}),
-            ToolCallRequest("search_customers", {"query": "acme"}),
-            ToolCallRequest(
-                "create_refund",
-                {"customer_id": "CUST-1001", "amount": 42.0, "reason": "duplicate charge"},
-            ),
-            "Refunded the duplicate $42.00 charge for Priya Sharma at Acme Corp.",
-        ]
+        self._script = script or SCENARIOS["refund"]
 
     async def next_turn(
         self, *, user_request: str, history: list[dict], tool_schemas: list[dict]

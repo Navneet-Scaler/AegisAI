@@ -13,20 +13,25 @@ export function DemoControls({
   onTokenChange: (value: string) => void;
   connected: boolean;
 }) {
-  const [running, setRunning] = useState(false);
+  const [running, setRunning] = useState<"refund" | "delete" | null>(null);
   const [resetting, setResetting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const runAgent = async () => {
-    setRunning(true);
+  const runAgent = async (scenario: "refund" | "delete") => {
+    setRunning(scenario);
     setMessage(null);
     try {
-      await api.runAgent("Please refund the duplicate charge on ticket TCK-4417.");
-      setMessage("Run started, watch the feed.");
+      if (scenario === "refund") {
+        await api.runAgent("Please refund the duplicate charge on ticket TCK-4417.", "demo-agent", "refund");
+        setMessage("Run started, watch the feed.");
+      } else {
+        await api.runAgent("Please remove the requested customer record.", "demo-agent", "delete");
+        setMessage("Run started. This one gets held, approve or block it in the feed.");
+      }
     } catch {
       setMessage("Could not start a run.");
     } finally {
-      setRunning(false);
+      setRunning(null);
     }
   };
 
@@ -62,11 +67,19 @@ export function DemoControls({
       </span>
 
       <button
-        onClick={runAgent}
-        disabled={running}
+        onClick={() => runAgent("refund")}
+        disabled={running !== null}
         className="rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
       >
-        {running ? "Starting..." : "Run demo request"}
+        {running === "refund" ? "Starting..." : "Run refund (auto allowed)"}
+      </button>
+
+      <button
+        onClick={() => runAgent("delete")}
+        disabled={running !== null}
+        className="rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+      >
+        {running === "delete" ? "Starting..." : "Run delete (gets held)"}
       </button>
 
       <button

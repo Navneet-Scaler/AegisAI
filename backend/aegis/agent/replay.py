@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aegis.agent.mock import MockProvider
+from aegis.agent.mock import SCENARIOS, MockProvider
 from aegis.agent.provider import AgentTurn, JudgeVerdict, ToolCallRequest
 
 _FIXTURES_PATH = Path(__file__).resolve().parent.parent / "seed" / "judge_fixtures.json"
@@ -30,8 +30,8 @@ def _fixture_key(proposed_call: ToolCallRequest) -> str:
 
 
 class ReplayProvider:
-    def __init__(self) -> None:
-        self._mock = MockProvider()
+    def __init__(self, scenario: str = "refund") -> None:
+        self._mock = MockProvider(SCENARIOS.get(scenario, SCENARIOS["refund"]))
         self._fixtures = _load_fixtures()
 
     async def next_turn(

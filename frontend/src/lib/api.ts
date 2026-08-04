@@ -80,10 +80,10 @@ export const api = {
       body: JSON.stringify({ approve }),
     }),
 
-  runAgent: (userRequest: string, agentName = "demo-agent") =>
+  runAgent: (userRequest: string, agentName = "demo-agent", scenario: "refund" | "delete" = "refund") =>
     request<{ session_id: string; final_answer: string | null }>("/agent/run", {
       method: "POST",
-      body: JSON.stringify({ request: userRequest, agent_name: agentName }),
+      body: JSON.stringify({ request: userRequest, agent_name: agentName, scenario }),
     }),
 
   resetDemo: (token: string) =>
