@@ -1,7 +1,7 @@
-"""POST /agent/run: drive one ReAct run to completion through Sentinel.
+"""POST /agent/run: drive one ReAct run to completion through AegisAI.
 
 Every tool call the agent proposes is created and scored inside
-`Sentinel.guard`; this endpoint has no path to a tool that bypasses it.
+`AegisAI.guard`; this endpoint has no path to a tool that bypasses it.
 """
 
 from __future__ import annotations

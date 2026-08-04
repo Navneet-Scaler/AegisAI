@@ -1,6 +1,6 @@
 """The rule layer: matching, the no-match baseline, and forcing verdicts."""
 
-from aegis.sentinel.rules import CallContext, evaluate, load_rules
+from aegis.aegisai.rules import CallContext, evaluate, load_rules
 from aegis.tools import registry
 from aegis.tools.registry import Tool
 

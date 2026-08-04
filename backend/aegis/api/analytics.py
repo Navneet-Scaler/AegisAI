@@ -11,10 +11,10 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aegis.aegisai.features import FEATURE_NAMES
+from aegis.aegisai.model_store import get_model
 from aegis.db import get_session
 from aegis.models import ToolCall, Verdict
-from aegis.sentinel.features import FEATURE_NAMES
-from aegis.sentinel.model_store import get_model
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 

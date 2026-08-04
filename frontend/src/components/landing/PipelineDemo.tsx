@@ -82,7 +82,7 @@ export function PipelineDemo() {
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--surface-2)]">
         <span className="h-2 w-2 rounded-full bg-[var(--allow)] animate-pulse" />
         <span className="text-xs font-mono text-[var(--text-muted)]">
-          sentinel: intercepting tool calls
+          aegisai: intercepting tool calls
         </span>
       </div>
 

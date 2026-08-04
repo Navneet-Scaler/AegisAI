@@ -1,5 +1,5 @@
 """Every layer and dependency fails toward hold, never toward allow. This is
-enforced in exactly one place, the try/except in Sentinel.guard, and these
+enforced in exactly one place, the try/except in AegisAI.guard, and these
 tests inject a failure at each layer independently to prove none of them
 finds a path to a silent allow.
 
@@ -15,16 +15,16 @@ import uuid
 import pytest
 from sqlmodel import select
 
+from aegis.aegisai.core import guard
 from aegis.db import get_sessionmaker
 from aegis.models import CallStatus, ToolCall, Verdict
-from aegis.sentinel.core import guard
 
 
 async def test_rules_file_failure_holds_then_times_out_to_block(monkeypatch):
     def broken_load_rules():
         raise ValueError("rules.yaml is corrupt")
 
-    monkeypatch.setattr("aegis.sentinel.core.load_rules", broken_load_rules)
+    monkeypatch.setattr("aegis.aegisai.core.load_rules", broken_load_rules)
 
     sessionmaker = get_sessionmaker()
 
@@ -69,7 +69,7 @@ async def test_pattern_layer_failure_never_reaches_allow(db_session, monkeypatch
     async def broken_pattern_score(context):
         raise RuntimeError("model file missing")
 
-    monkeypatch.setattr("aegis.sentinel.core.pattern_layer.score", broken_pattern_score)
+    monkeypatch.setattr("aegis.aegisai.core.pattern_layer.score", broken_pattern_score)
 
     call = await guard(
         session=db_session,
@@ -91,7 +91,7 @@ async def test_judge_layer_failure_never_reaches_allow(db_session, monkeypatch):
     async def broken_judge_score(context, *, user_request, history):
         raise TimeoutError("judge API timed out")
 
-    monkeypatch.setattr("aegis.sentinel.core.judge_layer.score", broken_judge_score)
+    monkeypatch.setattr("aegis.aegisai.core.judge_layer.score", broken_judge_score)
 
     call = await guard(
         session=db_session,
@@ -123,7 +123,7 @@ async def test_unresolved_hold_times_out_to_block_not_allow(db_session):
     )
 
     assert call.verdict == Verdict.BLOCK
-    assert call.decided_by == "sentinel-timeout"
+    assert call.decided_by == "aegisai-timeout"
     assert not call.executed
 
 

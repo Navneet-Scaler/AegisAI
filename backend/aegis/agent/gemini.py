@@ -6,7 +6,7 @@ performance), `gemini-3.1-flash-lite` for the judge (fastest, cheapest,
 enough for a structured consistency check).
 
 Both calls fail toward the caller raising, never toward a silent allow: the
-judge's caller (`aegis.sentinel.judge`) is the one that turns any exception
+judge's caller (`aegis.aegisai.judge`) is the one that turns any exception
 here into a `hold` verdict. This module does not swallow errors itself.
 """
 

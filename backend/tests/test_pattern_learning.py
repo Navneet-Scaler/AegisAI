@@ -7,12 +7,12 @@ import uuid
 
 from fastapi.testclient import TestClient
 
+from aegis.aegisai.core import guard
+from aegis.aegisai.features import extract, shape_key
+from aegis.aegisai.model import PatternModel
 from aegis.config import get_settings
 from aegis.db import get_sessionmaker
 from aegis.main import app
-from aegis.sentinel.core import guard
-from aegis.sentinel.features import extract, shape_key
-from aegis.sentinel.model import PatternModel
 
 
 def test_shape_key_is_stable_for_the_same_argument_shape():
@@ -107,8 +107,8 @@ def test_approving_a_held_call_measurably_lowers_the_next_similar_calls_score():
 
 
 def test_extract_marks_a_batch_delete_with_a_large_batch_size():
-    from aegis.sentinel.features import HistorySignals
-    from aegis.sentinel.rules import CallContext
+    from aegis.aegisai.features import HistorySignals
+    from aegis.aegisai.rules import CallContext
     from aegis.tools import registry
 
     tool = registry.require("delete_customer")

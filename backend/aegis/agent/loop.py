@@ -1,6 +1,6 @@
 """The ReAct loop.
 
-Every proposed tool call passes through `Sentinel.guard` before it can
+Every proposed tool call passes through `AegisAI.guard` before it can
 execute. There is no other path from here to a tool's implementation: the
 loop holds a reference to the tool registry only to list schemas for the
 model, never to call a tool directly. That absence is the whole point of the
@@ -14,9 +14,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aegis.aegisai.core import guard
 from aegis.agent.provider import AgentTurn, LLMProvider
 from aegis.models import Verdict
-from aegis.sentinel.core import guard
 from aegis.tools.registry import ToolRegistry
 
 MAX_STEPS = 10
@@ -95,5 +95,5 @@ async def run_agent(
 def _refusal_text(call) -> str:
     if call.verdict == Verdict.BLOCK:
         reason = call.judge_reasoning or "blocked by policy"
-        return f"[sentinel blocked this call: {reason}]"
-    return "[sentinel held this call and it was not approved in time]"
+        return f"[aegisai blocked this call: {reason}]"
+    return "[aegisai held this call and it was not approved in time]"

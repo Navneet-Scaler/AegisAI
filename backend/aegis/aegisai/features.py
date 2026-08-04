@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from aegis.sentinel.rules import CallContext
+from aegis.aegisai.rules import CallContext
 
 FEATURE_NAMES = [
     "destructiveness_read",

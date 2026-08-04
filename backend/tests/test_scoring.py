@@ -1,5 +1,5 @@
+from aegis.aegisai.scoring import composite
 from aegis.models import Verdict
-from aegis.sentinel.scoring import composite
 
 
 def test_low_scores_across_all_layers_allow():

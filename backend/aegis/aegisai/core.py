@@ -1,4 +1,4 @@
-"""Sentinel.guard: the single chokepoint every tool call must pass through.
+"""AegisAI.guard: the single chokepoint every tool call must pass through.
 
 The agent loop has no other path to a tool executor. Anything that goes
 wrong anywhere in the scoring pipeline, rules file, pattern model, judge
@@ -14,12 +14,12 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aegis.aegisai import approvals
+from aegis.aegisai import judge as judge_layer
+from aegis.aegisai import patterns as pattern_layer
+from aegis.aegisai.rules import CallContext, evaluate, load_rules
+from aegis.aegisai.scoring import composite
 from aegis.models import CallStatus, ToolCall, Verdict
-from aegis.sentinel import approvals
-from aegis.sentinel import judge as judge_layer
-from aegis.sentinel import patterns as pattern_layer
-from aegis.sentinel.rules import CallContext, evaluate, load_rules
-from aegis.sentinel.scoring import composite
 from aegis.tools.registry import registry
 
 
@@ -77,7 +77,7 @@ async def guard(
     await session.refresh(call)
 
     if call.verdict == Verdict.BLOCK:
-        _resolve(call, decided_by="sentinel")
+        _resolve(call, decided_by="aegisai")
         session.add(call)
         await session.commit()
         await session.refresh(call)
@@ -85,7 +85,7 @@ async def guard(
 
     if call.verdict == Verdict.ALLOW:
         _execute(call, arguments)
-        _resolve(call, decided_by="sentinel-auto-allow")
+        _resolve(call, decided_by="aegisai-auto-allow")
         session.add(call)
         await session.commit()
         await session.refresh(call)
@@ -99,7 +99,7 @@ async def guard(
 
     if call.status != CallStatus.RESOLVED:
         call.verdict = Verdict.BLOCK
-        _resolve(call, decided_by="sentinel-timeout")
+        _resolve(call, decided_by="aegisai-timeout")
 
     if call.verdict == Verdict.ALLOW and not call.executed:
         _execute(call, arguments)

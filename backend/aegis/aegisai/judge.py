@@ -3,7 +3,7 @@ asked, or does it look hijacked by something the agent read along the way.
 
 Delegates to the configured `LLMProvider.judge()`, wrapped in a strict
 timeout. Any exception, including a timeout, propagates out of `score()`
-rather than being caught here: `Sentinel.guard`'s outer try/except is the one
+rather than being caught here: `AegisAI.guard`'s outer try/except is the one
 place that turns a failure into a `hold`, and this layer must not quietly
 absorb a failure into a low score instead.
 """
@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import asyncio
 
+from aegis.aegisai.rules import CallContext
 from aegis.agent.factory import get_provider
 from aegis.agent.provider import ToolCallRequest
-from aegis.sentinel.rules import CallContext
 
 JUDGE_TIMEOUT_SECONDS = 8.0
 

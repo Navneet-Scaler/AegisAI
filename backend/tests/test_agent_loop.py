@@ -1,6 +1,6 @@
 """Phase 1 behaviour (the agent completes a multi-step task with zero API
 keys) plus Phase 2's chokepoint guarantee: every call passes through
-Sentinel.guard, which is why these tests now need a database session."""
+AegisAI.guard, which is why these tests now need a database session."""
 
 import uuid
 

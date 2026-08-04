@@ -12,10 +12,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import delete
 
+from aegis.aegisai import model_store
 from aegis.auth import require_demo_token
 from aegis.db import get_session
 from aegis.models import AgentSession, ModelState, ToolCall
-from aegis.sentinel import model_store
 from aegis.tools.crm import reset_demo_data
 
 router = APIRouter(prefix="/demo", tags=["demo"])

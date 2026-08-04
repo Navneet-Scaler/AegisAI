@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 
-from aegis.sentinel.features import FEATURE_NAMES
+from aegis.aegisai.features import FEATURE_NAMES
 
 _CLASSES = np.array([0, 1])  # 0 = safe, 1 = risky
 

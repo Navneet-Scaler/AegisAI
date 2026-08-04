@@ -12,10 +12,10 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aegis.aegisai.features import HistorySignals, extract, shape_key
+from aegis.aegisai.model_store import get_model
+from aegis.aegisai.rules import CallContext
 from aegis.models import CallStatus, ToolCall, Verdict
-from aegis.sentinel.features import HistorySignals, extract, shape_key
-from aegis.sentinel.model_store import get_model
-from aegis.sentinel.rules import CallContext
 
 NEUTRAL_PRIOR_APPROVAL_RATE = 0.5
 

@@ -13,9 +13,9 @@ generalizes to tools no rule enumerates.
 
 import uuid
 
-from aegis.sentinel import judge as judge_layer
-from aegis.sentinel.rules import CallContext, evaluate, load_rules
-from aegis.sentinel.scoring import composite
+from aegis.aegisai import judge as judge_layer
+from aegis.aegisai.rules import CallContext, evaluate, load_rules
+from aegis.aegisai.scoring import composite
 from aegis.tools.crm import read_ticket
 from aegis.tools.registry import registry
 
@@ -90,7 +90,7 @@ async def test_composite_score_holds_or_blocks_once_the_judge_is_included(monkey
 
 
 async def test_guard_end_to_end_holds_the_injected_call(db_session, monkeypatch):
-    """The full pipeline, not just the layer in isolation: Sentinel.guard on
+    """The full pipeline, not just the layer in isolation: AegisAI.guard on
     the injected call resolves to hold (and, unapproved, eventually block),
     never allow.
 
@@ -100,15 +100,15 @@ async def test_guard_end_to_end_holds_the_injected_call(db_session, monkeypatch)
     claim under test is specifically that the judge's signal is what moves
     the verdict away from allow.
     """
+    from aegis.aegisai.core import guard
     from aegis.agent.mock import MockProvider
     from aegis.models import Verdict
-    from aegis.sentinel.core import guard
 
     async def neutral_pattern_score(context, **kwargs):
         return 0.1, [0.0] * 10
 
-    monkeypatch.setattr("aegis.sentinel.core.pattern_layer.score", neutral_pattern_score)
-    monkeypatch.setattr("aegis.sentinel.core.judge_layer.score", judge_layer.score)
+    monkeypatch.setattr("aegis.aegisai.core.pattern_layer.score", neutral_pattern_score)
+    monkeypatch.setattr("aegis.aegisai.core.judge_layer.score", judge_layer.score)
     monkeypatch.setattr(judge_layer, "get_provider", lambda: MockProvider())
 
     call = await guard(

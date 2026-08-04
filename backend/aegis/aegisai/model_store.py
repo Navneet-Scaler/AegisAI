@@ -13,8 +13,8 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from aegis.aegisai.model import PatternModel
 from aegis.models import ModelState
-from aegis.sentinel.model import PatternModel
 
 _MODEL_ROW_ID = "pattern-model"
 _cached: PatternModel | None = None

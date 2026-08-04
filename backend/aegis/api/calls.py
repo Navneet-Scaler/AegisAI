@@ -15,11 +15,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from aegis.aegisai import approvals
+from aegis.aegisai.model_store import get_model, save_model
 from aegis.auth import require_demo_token
 from aegis.db import get_session
 from aegis.models import CallStatus, ToolCall, Verdict
-from aegis.sentinel import approvals
-from aegis.sentinel.model_store import get_model, save_model
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
@@ -66,14 +66,14 @@ async def decide_call(
     await session.commit()
     await session.refresh(call)
 
-    # Wakes the coroutine in Sentinel.guard that is polling this row, if this
+    # Wakes the coroutine in AegisAI.guard that is polling this row, if this
     # process is the one running it. If it is a different process, the
     # polling loop still finds the resolved row on its own within one
     # interval, so correctness never depends on this firing.
     approvals.signal_decision(call_id)
 
     # Online learning: a human decision updates the pattern model
-    # immediately, on the exact feature vector Sentinel scored at the time,
+    # immediately, on the exact feature vector AegisAI scored at the time,
     # not a recomputation. Calls that failed before pattern scoring ran
     # never got a feature vector, so there is nothing to learn from here.
     if call.pattern_features is not None:

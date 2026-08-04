@@ -4,11 +4,11 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
+from aegis.aegisai.core import guard
 from aegis.config import get_settings
 from aegis.db import get_sessionmaker
 from aegis.main import app
 from aegis.models import Verdict
-from aegis.sentinel.core import guard
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def test_read_endpoints_do_not_require_a_token(client):
 def test_approving_a_held_call_through_the_real_endpoint_lets_it_execute(client):
     """delete_customer is always held by policy. Approve it through the same
     token-protected HTTP endpoint a human reviewer would use, and confirm
-    Sentinel resumes and actually executes the call."""
+    AegisAI resumes and actually executes the call."""
     settings = get_settings()
     token = f"Bearer {settings.demo_token}"
     sessionmaker = get_sessionmaker()

@@ -40,7 +40,7 @@ User request
      |
      v
 +--------------------------------+
-|            SENTINEL            |
+|            AEGISAI            |
 |   1. intercept                 |
 |   2. score                     |
 |   3. decide                    |
@@ -52,7 +52,7 @@ User request
      +-- block  -->  refuse, return a structured reason to the agent
 ```
 
-`Sentinel.guard(tool_call, context)` is the single chokepoint. The agent loop has no code
+`AegisAI.guard(tool_call, context)` is the single chokepoint. The agent loop has no code
 path to a tool executor that bypasses it, and a test asserts exactly that. This is the
 whole claim of the project: the constraint lives in the architecture, so it holds even
 when the prompt does not.

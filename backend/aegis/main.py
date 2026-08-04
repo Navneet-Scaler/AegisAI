@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from aegis.aegisai.rules import load_rules
 from aegis.api.agent import router as agent_router
 from aegis.api.analytics import router as analytics_router
 from aegis.api.calls import router as calls_router
@@ -12,7 +13,6 @@ from aegis.api.demo import router as demo_router
 from aegis.api.stream import router as stream_router
 from aegis.config import get_settings
 from aegis.db import init_db
-from aegis.sentinel.rules import load_rules
 
 settings = get_settings()
 

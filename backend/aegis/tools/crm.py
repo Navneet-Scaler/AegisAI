@@ -3,7 +3,7 @@
 Every function here is a plain, honest implementation. There is no safety
 logic inside them. That is intentional: a tool must not be responsible for
 deciding whether it is safe to run itself, only for running correctly once
-something else has decided it may. The deciding happens in `aegis.sentinel`.
+something else has decided it may. The deciding happens in `aegis.aegisai`.
 """
 
 from __future__ import annotations

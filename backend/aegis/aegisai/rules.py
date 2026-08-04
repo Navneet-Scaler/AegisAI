@@ -9,7 +9,7 @@ being three numbers averaged for no better reason than that three numbers
 existed.
 
 A rules file that is missing or fails to parse is a fail-closed condition
-handled by the caller (`aegis.sentinel.core`), not swallowed here.
+handled by the caller (`aegis.aegisai.core`), not swallowed here.
 """
 
 from __future__ import annotations

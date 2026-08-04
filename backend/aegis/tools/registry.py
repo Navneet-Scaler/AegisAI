@@ -4,7 +4,7 @@ Tools declare themselves with the `@tool` decorator. The registry exports their
 JSON schemas for the model and resolves a name back to its implementation.
 
 The registry deliberately does not execute anything. Execution lives behind
-`Sentinel.guard`, and keeping the two apart is what makes the chokepoint
+`AegisAI.guard`, and keeping the two apart is what makes the chokepoint
 structural rather than a convention.
 """
 
