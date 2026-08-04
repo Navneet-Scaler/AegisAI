@@ -15,6 +15,7 @@ from sqlmodel import delete
 from aegis.auth import require_demo_token
 from aegis.db import get_session
 from aegis.models import AgentSession, ModelState, ToolCall
+from aegis.sentinel import model_store
 from aegis.tools.crm import reset_demo_data
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -28,5 +29,8 @@ async def reset(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
     await session.commit()
 
     reset_demo_data()
+    # The database row is gone; the in-process cached model would otherwise
+    # keep serving drifted weights until the next restart.
+    model_store.invalidate()
 
     return {"status": "reset"}

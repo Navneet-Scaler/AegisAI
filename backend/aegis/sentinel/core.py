@@ -52,8 +52,11 @@ async def guard(
     try:
         forced_verdict = await _score(
             call,
+            session=session,
+            agent_name=agent_name,
             tool_name=tool_name,
             arguments=arguments,
+            step_index=step_index,
             user_request=user_request,
             history=history,
         )
@@ -116,8 +119,11 @@ def _resolve(call: ToolCall, *, decided_by: str) -> None:
 async def _score(
     call: ToolCall,
     *,
+    session: AsyncSession,
+    agent_name: str,
     tool_name: str,
     arguments: dict[str, Any],
+    step_index: int,
     user_request: str,
     history: list[dict[str, Any]],
 ) -> str | None:
@@ -133,7 +139,11 @@ async def _score(
     call.matched_rules = rule_outcome.matched_rule_ids
     call.forced_by_rule = rule_outcome.forced_verdict is not None
 
-    call.pattern_score = await pattern_layer.score(context)
+    pattern_score, pattern_features = await pattern_layer.score(
+        context, session=session, agent_name=agent_name, step_index=step_index
+    )
+    call.pattern_score = pattern_score
+    call.pattern_features = pattern_features
 
     judge_score, judge_reasoning = await judge_layer.score(
         context, user_request=user_request, history=history
