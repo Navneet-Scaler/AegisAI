@@ -6,13 +6,28 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aegis.api.agent import router as agent_router
+from aegis.api.calls import router as calls_router
+from aegis.api.demo import router as demo_router
+from aegis.api.stream import router as stream_router
 from aegis.config import get_settings
+from aegis.db import init_db
+from aegis.sentinel.rules import load_rules
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await init_db()
+
+    # A rules file that fails to parse is a fail-closed condition. In
+    # production the app refuses to start rather than serving traffic that
+    # would fall back to a per-request hold on every single call.
+    try:
+        load_rules()
+    except Exception:
+        if settings.environment == "production":
+            raise
     yield
 
 
@@ -32,6 +47,9 @@ app.add_middleware(
 )
 
 app.include_router(agent_router)
+app.include_router(calls_router)
+app.include_router(demo_router)
+app.include_router(stream_router)
 
 
 @app.get("/health")

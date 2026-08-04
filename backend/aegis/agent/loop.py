@@ -1,10 +1,10 @@
 """The ReAct loop.
 
-Phase 1 scope only: this drives the provider and executes tools directly, with
-no risk scoring in front of them yet. From Phase 2 onward, `execute` is
-replaced by a call through `Sentinel.guard`, and that swap is the entire
-point of the project: the loop's shape does not change, only what stands
-between it and the tool.
+Every proposed tool call passes through `Sentinel.guard` before it can
+execute. There is no other path from here to a tool's implementation: the
+loop holds a reference to the tool registry only to list schemas for the
+model, never to call a tool directly. That absence is the whole point of the
+project, not an implementation detail.
 """
 
 from __future__ import annotations
@@ -12,7 +12,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from aegis.agent.provider import AgentTurn, LLMProvider, ToolCallRequest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from aegis.agent.provider import AgentTurn, LLMProvider
+from aegis.models import Verdict
+from aegis.sentinel.core import guard
 from aegis.tools.registry import ToolRegistry
 
 MAX_STEPS = 10
@@ -24,6 +28,7 @@ class RunResult:
     history: list[dict[str, Any]] = field(default_factory=list)
     steps_taken: int = 0
     stopped_reason: str = "final_answer"
+    call_ids: list[str] = field(default_factory=list)
 
 
 async def run_agent(
@@ -31,11 +36,16 @@ async def run_agent(
     user_request: str,
     provider: LLMProvider,
     tools: ToolRegistry,
+    session: AsyncSession,
+    session_id: str,
+    agent_name: str = "demo-agent",
+    approval_timeout_seconds: int = 120,
     max_steps: int = MAX_STEPS,
 ) -> RunResult:
     history: list[dict[str, Any]] = []
+    call_ids: list[str] = []
 
-    for _ in range(max_steps):
+    for step_index in range(max_steps):
         turn: AgentTurn = await provider.next_turn(
             user_request=user_request,
             history=history,
@@ -48,14 +58,28 @@ async def run_agent(
                 history=history,
                 steps_taken=len(history),
                 stopped_reason="final_answer",
+                call_ids=call_ids,
             )
 
-        result = _execute(turn.tool_call, tools)
+        call = await guard(
+            session=session,
+            session_id=session_id,
+            agent_name=agent_name,
+            tool_name=turn.tool_call.tool_name,
+            arguments=turn.tool_call.arguments,
+            step_index=step_index,
+            user_request=user_request,
+            history=history,
+            approval_timeout_seconds=approval_timeout_seconds,
+        )
+        call_ids.append(call.id)
+
         history.append(
             {
                 "tool_name": turn.tool_call.tool_name,
                 "arguments": turn.tool_call.arguments,
-                "result": result,
+                "result": call.result if call.executed else _refusal_text(call),
+                "verdict": call.verdict.value,
             }
         )
 
@@ -64,9 +88,12 @@ async def run_agent(
         history=history,
         steps_taken=len(history),
         stopped_reason="max_steps",
+        call_ids=call_ids,
     )
 
 
-def _execute(call: ToolCallRequest, tools: ToolRegistry) -> Any:
-    tool = tools.require(call.tool_name)
-    return tool.fn(**call.arguments)
+def _refusal_text(call) -> str:
+    if call.verdict == Verdict.BLOCK:
+        reason = call.judge_reasoning or "blocked by policy"
+        return f"[sentinel blocked this call: {reason}]"
+    return "[sentinel held this call and it was not approved in time]"

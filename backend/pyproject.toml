@@ -41,6 +41,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
+# B008: FastAPI's Depends() in a default argument is the framework's
+# documented dependency injection pattern, not the mutable-default footgun
+# this rule exists for.
+ignore = ["B008"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
