@@ -40,6 +40,41 @@ structural stands between a hijacked agent and the database.
 AegisAI is that structure. It does not ask the agent to behave. It removes the code path
 where misbehaving was possible.
 
+## Run it yourself
+
+```bash
+git clone https://github.com/Navneet-Scaler/AegisAI
+cd AegisAI
+docker compose up
+```
+
+That's the whole setup. No API key, no signup, no `.env` file required: it falls back to
+a mock LLM provider and SQLite automatically. Once it's up, mint a key and score a call:
+
+```bash
+KEY=$(curl -s -X POST http://localhost:8000/v1/keys -H "Content-Type: application/json" -d '{}' \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")
+
+curl -s -X POST http://localhost:8000/v1/guard \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"tool": "delete_customer", "args": {"customer_id": "8842"},
+       "context": {"user_request": "clean up test accounts"}}' | python3 -m json.tool
+```
+
+```json
+{
+  "verdict": "hold",
+  "score": 0.57,
+  "layers": { "rule": 0.6, "pattern": 0.1, "judge": 0.95 },
+  "reasoning": "The conversation contains an embedded instruction override that did not come from the user...",
+  "call_id": "c_9f2a..."
+}
+```
+
+Interactive docs, with a filled-in example you can run from the browser, at
+[localhost:8000/docs](http://localhost:8000/docs). The dashboard is at
+`localhost:3000`.
+
 ## Who can use this
 
 The repo is public and MIT licensed. Clone it, run it, fork it, or point your own agent's
@@ -137,6 +172,31 @@ results in a silent allow.
 | Database write fails | hold, the call does not execute |
 | Human approval times out | block |
 
+## The public API
+
+`POST /v1/guard` is the primary way to use AegisAI: score a proposed tool call and get a
+verdict back, over plain HTTP, from any language. It is stateless. It does not execute
+the tool, that stays entirely yours; it only decides.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /v1/keys` | Mint an API key. No signup. Rate limited to 3 per IP per hour. |
+| `POST /v1/guard` | Score a call. Requires `Authorization: Bearer <key>`. 60 requests/minute per key. |
+| `GET /docs` | Interactive Swagger UI with a filled-in example for `/v1/guard`. |
+
+Two runnable clients, neither of which imports this repo's own package, since an
+external caller never would either:
+- `scripts/demo.py`: mints a key and scores three example calls over plain HTTP.
+- `examples/openai-function-calling/`: a plain OpenAI function-calling loop that calls
+  `/v1/guard` before executing any tool. `test_guard_client.py` in that folder exercises
+  the AegisAI side of it without needing an OpenAI key.
+
+The internal `AegisAI.guard()` (`aegis/aegisai/core.py`) is a different, higher-level
+thing: it owns execution too, running the tool itself on allow and blocking the caller's
+own request until a human decides on hold. That is what the ReAct agent and dashboard
+demo use internally. `/v1/guard` only scores, which is the right contract for a public
+API that has never seen your tool's implementation.
+
 ## Tech stack
 
 | Component | Choice |
@@ -146,7 +206,14 @@ results in a silent allow.
 | Risk engine | Python rule engine, scikit-learn `SGDClassifier`, Gemini judge |
 | Storage | SQLite locally, Postgres in deployment |
 | Dashboard | Next.js App Router, TypeScript, Tailwind, Framer Motion, Recharts |
+| Auth | Self-built API keys (SHA-256 hashed, shown once), no third-party auth provider |
+| Rate limiting | `slowapi`, in process, no external service |
 | Deployment | Single Vercel project (frontend + backend as two services, same origin), Docker Compose locally, Railway as an alternative backend host |
+
+Every piece above runs on a free tier with no credit card: Vercel's Hobby plan, Gemini's
+free API tier (judge calls are opt in and default to a mock provider), GitHub Actions'
+free tier for public repos, and SQLite or any free-tier Postgres (Neon, Vercel Postgres)
+for storage. Nothing here requires a paid plan to run or to deploy.
 
 ## How to run
 
@@ -310,6 +377,15 @@ scored" walkthrough above.
 - Rule authoring UI with dry run against historical calls
 - Adapters for popular agent frameworks
 - Exportable audit reports
+- Per-key scoped rules, so different callers can carry different policy
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Issues and PRs are open.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Versioned with [semver](https://semver.org/).
 
 ## License
 

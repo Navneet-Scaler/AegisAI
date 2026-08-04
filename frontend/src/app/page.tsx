@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/Logo";
+import { CodeBlock } from "@/components/landing/CodeBlock";
 import { InterceptGraphic } from "@/components/landing/InterceptGraphic";
 import { Nav } from "@/components/landing/Nav";
 import { PipelineDemo } from "@/components/landing/PipelineDemo";
@@ -93,34 +94,91 @@ export default function Home() {
                 <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05]">
                   Constrain the architecture,
                   <br />
-                  <span className="text-[var(--text-muted)]">not the prompt.</span>
+                  <span className="text-[var(--text-muted)] italic">not the prompt.</span>
                 </h1>
 
                 <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--text-muted)]">
-                  AegisAI sits between an AI agent and its tools. Every call the agent
-                  proposes is intercepted before it executes, scored by a layered risk
-                  engine, and then allowed, held for a human, or blocked.
+                  A hosted API that scores an agent&apos;s proposed tool call before it
+                  executes: rules, an online pattern model, and an LLM judge, over one
+                  HTTP request. Call it from <em>any</em> language, any framework.
                 </p>
 
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <Link
-                    href="/dashboard"
+                  <a
+                    href="#quickstart"
                     className="rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
                     style={{ background: "var(--brand)" }}
                   >
-                    Open the live dashboard
-                  </Link>
-                  <a
-                    href="https://github.com/Navneet-Scaler/AegisAI"
+                    Get an API key
+                  </a>
+                  <Link
+                    href="/dashboard"
                     className="rounded-lg border border-[var(--border-strong)] px-5 py-2.5 text-sm font-medium text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
                   >
-                    Read the source
-                  </a>
+                    Open the live dashboard
+                  </Link>
                 </div>
               </Reveal>
 
               <Reveal delay={0.12}>
                 <InterceptGraphic />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* Quickstart */}
+        <section id="quickstart" className="border-b border-[var(--border)] scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-6 py-24">
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
+              <Reveal>
+                <span className="font-mono text-5xl font-bold" style={{ color: "var(--brand)" }}>
+                  01
+                </span>
+                <h2 className="mt-4 text-2xl font-semibold tracking-tight">
+                  Clone it, run it. No key required yet.
+                </h2>
+                <p className="mt-3 max-w-md text-[var(--muted)] leading-relaxed">
+                  Falls back to a mock judge and SQLite automatically, so this works with
+                  nothing set. Docs at <code className="font-mono text-sm">/docs</code> once
+                  it&apos;s up.
+                </p>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <CodeBlock
+                  label="run it yourself"
+                  lines={[
+                    "git clone https://github.com/Navneet-Scaler/AegisAI",
+                    "cd AegisAI",
+                    "docker compose up",
+                  ]}
+                />
+              </Reveal>
+
+              <Reveal delay={0.15}>
+                <span className="font-mono text-5xl font-bold" style={{ color: "var(--brand)" }}>
+                  02
+                </span>
+                <h2 className="mt-4 text-2xl font-semibold tracking-tight">
+                  Mint a key, score a call.
+                </h2>
+                <p className="mt-3 max-w-md text-[var(--muted)] leading-relaxed">
+                  No signup. The response comes back with a verdict, the three layer
+                  scores, and the judge&apos;s reasoning, before anything executes.
+                </p>
+              </Reveal>
+              <Reveal delay={0.25}>
+                <CodeBlock
+                  label="mint a key and call it"
+                  lines={[
+                    "# no signup, returned once",
+                    'curl -X POST localhost:8000/v1/keys -d "{}"',
+                    "",
+                    "curl -X POST localhost:8000/v1/guard \\",
+                    '  -H "Authorization: Bearer $KEY" \\',
+                    '  -d \'{"tool": "delete_customer", "args": {"customer_id": "8842"}}\'',
+                  ]}
+                />
               </Reveal>
             </div>
           </div>
@@ -183,7 +241,10 @@ export default function Home() {
               {LAYERS.map((layer, i) => (
                 <Reveal key={layer.n} delay={i * 0.08}>
                   <div className="h-full rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors hover:border-[var(--border-strong)]">
-                    <span className="font-mono text-xs" style={{ color: "var(--brand)" }}>
+                    <span
+                      className="font-mono text-3xl font-bold"
+                      style={{ color: "var(--brand)" }}
+                    >
                       {layer.n}
                     </span>
                     <h3 className="mt-3 text-lg font-medium tracking-tight">{layer.name}</h3>

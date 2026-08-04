@@ -1,0 +1,38 @@
+# Changelog
+
+All notable changes to this project are documented here. Format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
+[Semantic Versioning](https://semver.org/).
+
+## [0.2.0]
+
+### Added
+- Public, hosted API: `POST /v1/guard` scores a proposed tool call through
+  the rule, pattern, and judge layers and returns a verdict, without
+  executing anything itself. This is the primary way to use AegisAI now:
+  any agent, in any language, calls this endpoint over HTTP.
+- `POST /v1/keys`: no-signup API key creation, rate limited per IP.
+- Per-key rate limiting on `/v1/guard` (`slowapi`, in-process, no external
+  service).
+- `/docs` and `/redoc` with a filled-in request example, so the API is
+  usable directly from Swagger UI's "Try it out".
+- `scripts/demo.py`: a client of the public API over plain HTTP, no import
+  of this repo's own package, proving the API works standalone.
+- `examples/openai-function-calling/`: a plain OpenAI function-calling loop
+  guarded by `POST /v1/guard`, plus a test that exercises the AegisAI side
+  without needing an OpenAI key.
+- Landing page redesign: a shield logo mark, an animated diagram of the
+  intercept mechanism, a sticky nav, a real demo GIF and screenshot in the
+  README.
+- `CONTRIBUTING.md`.
+
+### Changed
+- README rewritten around the hosted API as the primary integration path.
+
+## [0.1.0]
+
+Initial release: the internal middleware. `AegisAI.guard()` intercepts a
+tool call inside an agent's own process, scores it (static rules, an online
+pattern classifier, an LLM judge), and resolves it to allow, hold, or block.
+Includes the Next.js dashboard, the Docker Compose demo, and the Vercel and
+Railway deployment paths.

@@ -2,8 +2,10 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from aegis.aegisai.rules import load_rules
 from aegis.api.agent import router as agent_router
@@ -11,8 +13,10 @@ from aegis.api.analytics import router as analytics_router
 from aegis.api.calls import router as calls_router
 from aegis.api.demo import router as demo_router
 from aegis.api.stream import router as stream_router
+from aegis.api.v1 import router as v1_router
 from aegis.config import get_settings
 from aegis.db import init_db
+from aegis.rate_limit import limiter
 
 settings = get_settings()
 
@@ -34,10 +38,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AegisAI",
-    description="An architectural firewall for AI agents.",
-    version="0.1.0",
+    description=(
+        "Score an AI agent's proposed tool call before it executes. "
+        "POST /v1/guard runs a rule engine, an online pattern model, and an LLM "
+        "judge, and returns allow, hold, or block. Mint a key at POST /v1/keys, "
+        "no signup required."
+    ),
+    version="0.2.0",
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"error": "rate_limited", "detail": str(exc.detail)},
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,6 +72,7 @@ app.include_router(analytics_router)
 app.include_router(calls_router)
 app.include_router(demo_router)
 app.include_router(stream_router)
+app.include_router(v1_router)
 
 
 @app.get("/health")
