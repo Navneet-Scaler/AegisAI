@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from aegis.api.agent import router as agent_router
+from aegis.api.analytics import router as analytics_router
 from aegis.api.calls import router as calls_router
 from aegis.api.demo import router as demo_router
 from aegis.api.stream import router as stream_router
@@ -47,6 +48,7 @@ app.add_middleware(
 )
 
 app.include_router(agent_router)
+app.include_router(analytics_router)
 app.include_router(calls_router)
 app.include_router(demo_router)
 app.include_router(stream_router)
