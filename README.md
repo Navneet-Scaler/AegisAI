@@ -170,6 +170,28 @@ cd backend && uv run pytest
 cd frontend && npm run lint && npm run build
 ```
 
+### Deploy your own
+
+The backend deploys to [Railway](https://railway.app) from `backend/Dockerfile` and
+`backend/railway.toml`, and the frontend deploys to [Vercel](https://vercel.com) with its
+root directory set to `frontend/`.
+
+**Backend, on Railway:**
+1. New project, deploy from this GitHub repo, set the service root directory to `backend`.
+2. Add a Postgres plugin and set `AEGIS_DATABASE_URL` to its connection string with the
+   `postgresql+asyncpg://` scheme.
+3. Set `AEGIS_ENVIRONMENT=production`, `AEGIS_DEMO_TOKEN` to a real secret,
+   `AEGIS_CORS_ORIGINS` to your Vercel domain, and `AEGIS_LLM_MODE=replay` (or `live` with
+   `AEGIS_GEMINI_API_KEY` set).
+4. Keep replicas at 1. See the comment in `railway.toml` for why.
+
+**Frontend, on Vercel:**
+1. Import this repo, set the project root directory to `frontend`.
+2. Set `NEXT_PUBLIC_API_URL` to the Railway backend's public URL.
+
+Because `AEGIS_LLM_MODE` defaults to `replay`, a deployment needs no Gemini key to run
+the full demo; live judge calls are opt in.
+
 ## Demo
 
 1. An agent processes a queue of customer support requests. Calls stream into the
