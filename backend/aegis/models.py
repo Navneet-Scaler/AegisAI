@@ -54,6 +54,10 @@ class ToolCall(SQLModel, table=True):
     matched_rules: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     judge_reasoning: str | None = None
     failure_reason: str | None = None
+    # The exact feature vector the pattern layer scored, kept so a later
+    # human decision trains on what was actually evaluated rather than a
+    # recomputation that could have drifted since.
+    pattern_features: list[float] | None = Field(default=None, sa_column=Column(JSON))
 
     # Decision
     verdict: Verdict = Field(default=Verdict.HOLD)
