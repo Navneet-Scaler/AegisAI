@@ -126,7 +126,7 @@ results in a silent allow.
 | Risk engine | Python rule engine, scikit-learn `SGDClassifier`, Gemini judge |
 | Storage | SQLite locally, Postgres in deployment |
 | Dashboard | Next.js App Router, TypeScript, Tailwind, Framer Motion, Recharts |
-| Deployment | Backend on Railway, frontend on Vercel, Docker Compose locally |
+| Deployment | Single Vercel project (frontend + backend as two services, same origin), Docker Compose locally, Railway as an alternative backend host |
 
 ## How to run
 
@@ -172,22 +172,28 @@ cd frontend && npm run lint && npm run build
 
 ### Deploy your own
 
-The backend deploys to [Railway](https://railway.app) from `backend/Dockerfile` and
-`backend/railway.toml`, and the frontend deploys to [Vercel](https://vercel.com) with its
-root directory set to `frontend/`.
+The whole app deploys as one [Vercel](https://vercel.com) project. The root `vercel.json`
+declares two services, `frontend` (Next.js) and `backend` (FastAPI), and rewrites
+`/api/backend/*` to the backend so both run on the same origin.
 
-**Backend, on Railway:**
-1. New project, deploy from this GitHub repo, set the service root directory to `backend`.
-2. Add a Postgres plugin and set `AEGIS_DATABASE_URL` to its connection string with the
-   `postgresql+asyncpg://` scheme.
-3. Set `AEGIS_ENVIRONMENT=production`, `AEGIS_DEMO_TOKEN` to a real secret,
-   `AEGIS_CORS_ORIGINS` to your Vercel domain, and `AEGIS_LLM_MODE=replay` (or `live` with
-   `AEGIS_GEMINI_API_KEY` set).
-4. Keep replicas at 1. See the comment in `railway.toml` for why.
+**Steps:**
+1. Import this repo on Vercel. It detects both services from `vercel.json` automatically.
+2. On the `backend` service, set `AEGIS_ENVIRONMENT=production`, `AEGIS_DATABASE_URL` to a
+   Postgres connection string (`postgresql+asyncpg://` scheme; Vercel Postgres or any
+   managed Postgres works), and `AEGIS_DEMO_TOKEN` to a real secret. Leave
+   `AEGIS_LLM_MODE=replay` unless you're setting `AEGIS_GEMINI_API_KEY` for live judge calls.
+3. On the `frontend` service, set `NEXT_PUBLIC_API_URL=/api/backend`. Same origin, so this
+   is a relative path, not a separate host.
+4. Deploy.
 
-**Frontend, on Vercel:**
-1. Import this repo, set the project root directory to `frontend`.
-2. Set `NEXT_PUBLIC_API_URL` to the Railway backend's public URL.
+Because the backend is same-origin behind the rewrite, `AEGIS_CORS_ORIGINS` mostly stops
+mattering for the deployed app; it's still enforced server-side as defense in depth, and
+still matters for local development where the frontend and backend run on different ports.
+
+`backend/railway.toml` is kept as an alternative if you'd rather run the backend as its own
+service on [Railway](https://railway.app) instead (set the service root to `backend`, add a
+Postgres plugin, and point the frontend's `NEXT_PUBLIC_API_URL` at its public URL). Not the
+primary path documented here, but a plain FastAPI + Docker service, so it works the same way.
 
 Because `AEGIS_LLM_MODE` defaults to `replay`, a deployment needs no Gemini key to run
 the full demo; live judge calls are opt in.
