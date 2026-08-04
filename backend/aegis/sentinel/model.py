@@ -21,24 +21,38 @@ _CLASSES = np.array([0, 1])  # 0 = safe, 1 = risky
 
 
 def _synthetic_seed() -> tuple[list[list[float]], list[int]]:
-    """A small, clearly separable seed set: destructive, large-batch, unseen
-    calls are risky; read-only, familiar, small calls are not. This is not
-    meant to be an accurate classifier on its own, only a reasonable prior
-    to update from, which is exactly what a fresh deployment should ship
-    with rather than an uninitialized model that has no opinion at all."""
+    """A small, clearly separable seed set: destructive, large-batch,
+    high-amount, or wrong-recipient calls are risky; everything else is not.
+
+    Both classes span both `shape_seen_before` states on purpose. A first
+    ever call to a brand-new tool must not read as risky on that basis
+    alone, since "no history" means "nothing known against it" everywhere
+    else in this system, not "presumed dangerous". If every safe example
+    here had `shape_seen_before=1` and every risky example had it at 0, the
+    model would learn "unfamiliar" as the risk signal instead of what should
+    actually predict it: destructiveness, batch size, amount, and recipient.
+
+    This is not meant to be an accurate classifier on its own, only a
+    reasonable, non-perverse prior to update from, which is what a fresh
+    deployment should ship with rather than an uninitialized model with no
+    opinion at all.
+    """
     safe = [
         [1, 0, 0, 0, 0.02, 0.0, 0.0, 0.1, 1.0, 0.9],
-        [1, 0, 0, 0, 0.02, 0.0, 0.0, 0.2, 1.0, 0.95],
+        [1, 0, 0, 0, 0.02, 0.0, 0.0, 0.0, 0.0, 0.5],
         [0, 1, 0, 0, 0.02, 0.05, 0.0, 0.3, 1.0, 0.8],
-        [0, 1, 0, 0, 0.02, 0.1, 0.0, 0.2, 1.0, 0.85],
+        [0, 1, 0, 0, 0.02, 0.1, 0.0, 0.0, 0.0, 0.5],
         [0, 0, 1, 0, 0.02, 0.0, 0.0, 0.3, 1.0, 0.7],
+        [0, 0, 1, 0, 0.02, 0.0, 0.0, 0.0, 0.0, 0.5],
     ]
     risky = [
         [0, 0, 0, 1, 0.4, 0.0, 0.0, 0.1, 0.0, 0.5],
-        [0, 0, 0, 1, 1.0, 0.0, 0.0, 0.2, 0.0, 0.5],
+        [0, 0, 0, 1, 1.0, 0.0, 0.0, 0.2, 1.0, 0.9],
         [0, 1, 0, 0, 0.02, 0.9, 0.0, 0.3, 0.0, 0.5],
+        [0, 1, 0, 0, 0.02, 0.95, 0.0, 0.2, 1.0, 0.8],
         [0, 0, 1, 0, 0.02, 0.0, 1.0, 0.2, 0.0, 0.5],
-        [0, 0, 0, 1, 0.2, 0.0, 0.0, 0.1, 0.0, 0.5],
+        [0, 0, 1, 0, 0.02, 0.0, 1.0, 0.1, 1.0, 0.6],
+        [0, 0, 0, 1, 0.2, 0.0, 0.0, 0.1, 1.0, 0.85],
     ]
     features = safe + risky
     labels = [0] * len(safe) + [1] * len(risky)
