@@ -1,0 +1,47 @@
+# Static policy for the rule layer. Declarative on purpose: a rule is data,
+# not code, so it can be edited (Phase 5's /policy screen) without a redeploy.
+#
+# Each rule that matches contributes `score` to the rule component and, if it
+# carries `force`, wins the composite outright regardless of what the other
+# two layers say.
+
+rules:
+  - id: destructive-delete
+    description: Deleting any customer records always requires at least human approval.
+    match:
+      tool_in: [delete_customer]
+    score: 0.6
+    force: hold
+
+  - id: bulk-delete-block
+    description: Deleting more than 10 customer records in one call is blocked outright.
+    match:
+      tool_in: [delete_customer]
+      arg_len_gt:
+        customer_ids: 10
+    score: 1.0
+    force: block
+
+  - id: large-refund
+    description: Refunds or billing adjustments over $500 require human approval.
+    match:
+      tool_in: [create_refund, update_billing]
+      arg_gt:
+        amount: 500
+    score: 0.55
+    force: hold
+
+  - id: external-email
+    description: Email to a recipient outside the allowlisted domains requires human approval.
+    match:
+      tool_in: [send_email]
+      arg_domain_not_in:
+        to: [acmecorp.test, brightlabs.test, northwind.test, aegisai.test]
+    score: 0.5
+    force: hold
+
+  - id: destructive-tier-baseline
+    description: Any tool declared destructive contributes baseline risk even without a hard match.
+    match:
+      destructiveness_in: [destructive]
+    score: 0.3
