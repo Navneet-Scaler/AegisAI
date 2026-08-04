@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from aegis.api.agent import router as agent_router
 from aegis.config import get_settings
 
 settings = get_settings()
@@ -29,6 +30,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+app.include_router(agent_router)
 
 
 @app.get("/health")
