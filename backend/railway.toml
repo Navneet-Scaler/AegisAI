@@ -1,0 +1,17 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "uvicorn aegis.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+# Railway is pinned to a single instance on purpose. Sentinel's held-call
+# wait polls its own database row rather than relying on in-process state, so
+# correctness does not depend on this, but the demo token and CORS setup
+# assume one process, and that assumption is documented here rather than
+# discovered during an incident.
+numReplicas = 1
