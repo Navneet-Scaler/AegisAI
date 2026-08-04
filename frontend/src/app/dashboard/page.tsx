@@ -94,7 +94,7 @@ export default function DashboardPage() {
           ))}
         </ul>
 
-        <div className="lg:sticky lg:top-6 lg:self-start lg:h-[calc(100vh-8rem)]">
+        <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
           <CallDetail call={selected} token={token} onDecided={() => {}} />
         </div>
       </div>

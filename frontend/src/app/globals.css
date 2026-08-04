@@ -25,6 +25,15 @@
   --allow: #34d399;
   --hold: #fbbf24;
   --block: #fb7185;
+
+  /* Marketing-surface accent only (hero, nav, badges). A deliberate echo of
+     --block: the danger red that reads a held or blocked call on the
+     dashboard is the same red that makes the case for the product on the
+     landing page. Functional chrome (focus rings, selection, dashboard
+     accents) stays on --accent so the two never collide inside one view. */
+  --brand: #ef4444;
+  --brand-dim: #7f1d1d;
+  --brand-glow: #ef444433;
 }
 
 @media (prefers-color-scheme: light) {
@@ -45,6 +54,10 @@
     --allow: #059669;
     --hold: #b45309;
     --block: #e11d48;
+
+    --brand: #dc2626;
+    --brand-dim: #fecaca;
+    --brand-glow: #dc262622;
   }
 }
 
@@ -59,6 +72,8 @@
   --color-faint: var(--text-faint);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
+  --color-brand: var(--brand);
+  --color-brand-dim: var(--brand-dim);
   --color-allow: var(--allow);
   --color-hold: var(--hold);
   --color-block: var(--block);

@@ -54,7 +54,7 @@ export function CallDetail({
 
   if (!call) {
     return (
-      <div className="flex h-full items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--faint)]">
+      <div className="flex min-h-64 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--faint)]">
         Select a call from the feed to see its full risk breakdown.
       </div>
     );
@@ -67,7 +67,7 @@ export function CallDetail({
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="flex h-full flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"
+        className="flex flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -115,7 +115,7 @@ export function CallDetail({
           </div>
         )}
 
-        <div className="mt-auto pt-5">
+        <div className="mt-6">
           {canDecide ? (
             <>
               <div className="flex gap-2">

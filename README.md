@@ -13,7 +13,17 @@ for a human, or blocked.
 ![Next.js 16](https://img.shields.io/badge/next.js-16-black)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
+**[Live demo: aiaegis.vercel.app](https://aiaegis.vercel.app)**
+
 </div>
+
+---
+
+![The AegisAI dashboard: a held delete_customer call, its composite score broken down into the rule, pattern, and judge layers, and the approve/block controls](docs/assets/demo.gif)
+
+*Recorded against a running instance: a refund auto allows, a delete is held by policy,
+its full risk breakdown is inspected, and it is approved through the token protected
+endpoint. Not a mockup, every frame is the real dashboard driven through the real API.*
 
 ---
 
@@ -38,6 +48,8 @@ demo locally or to read the code. The one thing gated behind the demo token is t
 approve/block action on a held call (`POST /calls/{id}/decide`); everything else, including
 watching the live feed and reading the audit trail, is open.
 
+![The AegisAI landing page: an animated diagram showing a call leaving the agent, passing through the AegisAI gate, and routing to allow, hold, or block](docs/assets/landing.png)
+
 ## The approach
 
 ```
@@ -48,7 +60,7 @@ User request
      |
      v
 +--------------------------------+
-|            AEGISAI            |
+|            AEGISAI             |
 |   1. intercept                 |
 |   2. score                     |
 |   3. decide                    |
@@ -180,7 +192,9 @@ cd frontend && npm run lint && npm run build
 
 ### Deploy your own
 
-The whole app deploys as one [Vercel](https://vercel.com) project. The root `vercel.json`
+The live demo at [aiaegis.vercel.app](https://aiaegis.vercel.app) is this exact repo,
+deployed with the steps below. The whole app deploys as one [Vercel](https://vercel.com)
+project. The root `vercel.json`
 declares two services, `frontend` (Next.js) and `backend` (FastAPI), and rewrites
 `/api/backend/*` to the backend so both run on the same origin.
 
@@ -275,12 +289,20 @@ update the moment you send that decision.
 
 ## Demo
 
-1. An agent processes a queue of customer support requests. Calls stream into the
-   dashboard and most are auto approved.
-2. A bulk account deletion arrives. It is held, and execution pauses.
-3. The dashboard shows why: the agent has never issued a delete at this scale, and the
-   judge flagged the call as inconsistent with what the user actually asked for.
-4. Approve it once, then run a similar call. The score has dropped and it passes.
+The GIF at the top of this README is this exact sequence, captured against a running
+instance, not a mockup.
+
+1. Click "Run refund" on the dashboard. Three tool calls stream in, all auto allowed.
+2. Click "Run delete". `delete_customer` is always held by `seed/rules.yaml`'s
+   `destructive-delete` rule, regardless of what the pattern or judge layers say.
+3. Select the held call to see why: the composite score broken into its three layers,
+   the matched rules, and the judge's reasoning.
+4. Approve it with the demo token. It executes, and the run completes.
+5. Run it again, the pattern layer already updated from that one decision.
+
+For the prompt injection scenario specifically (a call the rule layer alone would miss but
+the judge catches), see `backend/tests/test_prompt_injection.py`, or read the "How risk is
+scored" walkthrough above.
 
 ## Roadmap
 
