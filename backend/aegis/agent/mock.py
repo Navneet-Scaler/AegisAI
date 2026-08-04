@@ -83,11 +83,20 @@ class MockProvider:
 
         haystack = user_request.lower()
         for turn in history:
-            haystack += " " + str(turn.get("result", "")).lower()
+            # Internal agent history uses "result"; external callers to
+            # POST /v1/guard pass plain conversation turns shaped like
+            # {"role": ..., "content": ...} instead. Check both rather than
+            # assuming one shape, since this heuristic is also replay mode's
+            # fallback for calls made through the public API.
+            text = turn.get("result", turn.get("content", ""))
+            haystack += " " + str(text).lower()
 
         injected = "ignore" in haystack and "instructions" in haystack
         tool = registry.get(proposed_call.tool_name)
-        changes_state = tool is not None and tool.destructiveness != "read"
+        # Unregistered tools are whatever an external caller to /v1/guard
+        # named them; default to "may change state" rather than "read only",
+        # the same fail toward caution the rest of this system uses.
+        changes_state = tool is None or tool.destructiveness != "read"
 
         if injected and changes_state:
             return JudgeVerdict(

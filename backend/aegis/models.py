@@ -88,3 +88,16 @@ class ModelState(SQLModel, table=True):
     id: str = Field(default="pattern-model", primary_key=True)
     weights: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=_now)
+
+
+class ApiKey(SQLModel, table=True):
+    """A public API key for POST /v1/guard. Only the SHA-256 hash is stored;
+    the raw key is shown to the caller exactly once, at creation, the same
+    pattern Stripe and GitHub use for their tokens."""
+
+    id: str = Field(primary_key=True)
+    key_hash: str = Field(index=True, unique=True)
+    owner_label: str = "anonymous"
+    created_at: datetime = Field(default_factory=_now)
+    revoked_at: datetime | None = None
+    request_count: int = 0
