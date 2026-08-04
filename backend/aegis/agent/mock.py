@@ -49,20 +49,28 @@ class MockProvider:
     async def judge(
         self, *, user_request: str, history: list[dict], proposed_call: ToolCallRequest
     ) -> JudgeVerdict:
-        """A conservative heuristic standing in for a real model in tests: a
-        destructive call whose arguments never appear in the user's own
-        request or the ticket body is treated as unlikely to be consistent."""
+        """A conservative heuristic standing in for a real model in tests and
+        in replay mode's fallback path: any call that changes state, reached
+        after the conversation contains an embedded instruction override, is
+        treated as unlikely to be consistent, regardless of which tool it is
+        or which domain or amount it targets. A rule-only system only catches
+        this if it happens to have a rule matching that exact tool and
+        argument; the judge catches it because of *why* the call is being
+        made, which generalizes to tools no rule was ever written for."""
+        from aegis.tools.registry import registry
+
         haystack = user_request.lower()
         for turn in history:
             haystack += " " + str(turn.get("result", "")).lower()
 
-        suspicious = proposed_call.tool_name in {"delete_customer", "send_email"} and (
-            "ignore" in haystack and "instructions" in haystack
-        )
-        if suspicious:
+        injected = "ignore" in haystack and "instructions" in haystack
+        tool = registry.get(proposed_call.tool_name)
+        changes_state = tool is not None and tool.destructiveness != "read"
+
+        if injected and changes_state:
             return JudgeVerdict(
                 consistent=False,
-                risk=0.95,
+                risk=1.0,
                 reasoning=(
                     "The conversation contains an embedded instruction override "
                     "('ignore all previous instructions'), which did not come from "
