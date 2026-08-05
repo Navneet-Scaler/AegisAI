@@ -1,19 +1,28 @@
 """The rule layer: static policy that can force a verdict outright.
 
-Rules are declarative YAML rather than code, so the policy in `seed/rules.yaml`
-can be edited without a redeploy. When no rule matches at all, the rule
-component contributes `RULE_NO_MATCH_BASELINE`, not zero. Zero would assert
+Rules are declarative YAML rather than code, so a policy can be edited
+without a redeploy. When no rule matches at all, the rule component
+contributes `RULE_NO_MATCH_BASELINE`, not zero. Zero would assert
 "affirmatively safe", which no rule ever claimed; the baseline means "nothing
 known against it", which keeps the composite score meaningful instead of
 being three numbers averaged for no better reason than that three numbers
 existed.
 
-A rules file that is missing or fails to parse is a fail-closed condition
+Policies are scoped per API key (`ApiKey.policy_id`), not one global rule
+set for every caller: a rule tuned for one team's acceptable refund
+threshold is wrong for another's, and that is the actual precondition for
+this API being usable by more than one party at a time. Each policy is a
+file under `seed/policies/<policy_id>.yaml`; `default` is the most
+restrictive baseline, and new keys get it unless a looser policy is chosen
+deliberately.
+
+A policy file that is missing or fails to parse is a fail-closed condition
 handled by the caller (`aegis.aegisai.core`), not swallowed here.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -24,7 +33,8 @@ from aegis.tools.registry import Tool
 
 RULE_NO_MATCH_BASELINE = 0.1
 
-_RULES_PATH = Path(__file__).resolve().parent.parent / "seed" / "rules.yaml"
+_POLICIES_DIR = Path(__file__).resolve().parent.parent / "seed" / "policies"
+_VALID_POLICY_ID = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
 
 @dataclass(frozen=True)
@@ -42,16 +52,28 @@ class CallContext:
     arguments: dict[str, Any]
 
 
-def load_rules(path: Path = _RULES_PATH) -> list[dict[str, Any]]:
-    """Raises if the file is missing or malformed. The caller decides that
-    this means the app should refuse to start (in production) or every call
-    should hold (at request time)."""
+def load_rules(policy_id: str = "default") -> list[dict[str, Any]]:
+    """Raises if the policy id is malformed or the file is missing or
+    malformed. The caller decides that this means the app should refuse to
+    start (in production) or the call should hold (at request time). Never
+    silently falls back to a different policy: a caller scoped to a policy
+    that failed to load must not be scored against someone else's rules."""
+    if not _VALID_POLICY_ID.match(policy_id):
+        raise ValueError(f"Invalid policy id: {policy_id!r}")
+
+    path = _POLICIES_DIR / f"{policy_id}.yaml"
     text = path.read_text()
     data = yaml.safe_load(text)
     rules = data.get("rules") if isinstance(data, dict) else None
     if not isinstance(rules, list):
         raise ValueError(f"{path} did not contain a top-level 'rules' list")
     return rules
+
+
+def list_policy_ids() -> list[str]:
+    if not _POLICIES_DIR.is_dir():
+        return []
+    return sorted(p.stem for p in _POLICIES_DIR.glob("*.yaml"))
 
 
 def evaluate(context: CallContext, rules: list[dict[str, Any]]) -> RuleOutcome:

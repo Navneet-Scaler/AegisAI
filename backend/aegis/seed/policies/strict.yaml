@@ -1,0 +1,35 @@
+# A deliberately tighter policy than default.yaml, so the per-key scoping
+# mechanism has something real to prove: the same call, scored under two
+# different keys, should reach two different verdicts.
+
+rules:
+  - id: destructive-delete-block
+    description: Any customer deletion is blocked outright, no hold, no exceptions.
+    match:
+      tool_in: [delete_customer]
+    score: 1.0
+    force: block
+
+  - id: low-refund-threshold
+    description: Refunds or billing adjustments over $100 require human approval.
+    match:
+      tool_in: [create_refund, update_billing]
+      arg_gt:
+        amount: 100
+    score: 0.6
+    force: hold
+
+  - id: external-email-block
+    description: Email to a recipient outside the allowlisted domains is blocked outright.
+    match:
+      tool_in: [send_email]
+      arg_domain_not_in:
+        to: [acmecorp.test, brightlabs.test, northwind.test, aegisai.test]
+    score: 0.9
+    force: block
+
+  - id: destructive-tier-baseline
+    description: Any tool declared destructive contributes higher baseline risk.
+    match:
+      destructiveness_in: [destructive]
+    score: 0.5

@@ -181,8 +181,28 @@ the tool, that stays entirely yours; it only decides.
 | Endpoint | What it does |
 |---|---|
 | `POST /v1/keys` | Mint an API key. No signup. Rate limited to 3 per IP per hour. |
+| `POST /v1/keys/rotate` | Mint a replacement key, revoke the presented one. Requires the key itself. |
+| `POST /v1/keys/revoke` | Immediately invalidate the presented key. Requires the key itself. |
+| `GET /v1/policies` | List the available policy ids. |
 | `POST /v1/guard` | Score a call. Requires `Authorization: Bearer <key>`. 60 requests/minute per key. |
 | `GET /docs` | Interactive Swagger UI with a filled-in example for `/v1/guard`. |
+
+**Every key is scoped to a policy**, not a single global rule set for every caller. Pass
+`policy_id` when minting a key (defaults to `default`, the most restrictive baseline);
+`GET /v1/policies` lists what's available. The same call scores differently depending on
+which key sent it: a $150 refund allows under `default` (threshold $500) and holds under
+`strict` (threshold $100), because the two keys are scored against genuinely different
+rule sets, not a shared one with a flag.
+
+**Keys carry a lifecycle.** `expires_in_days` at creation, `/v1/keys/rotate` to replace a
+key without a gap in validity, `/v1/keys/revoke` to kill one immediately. Both rotate and
+revoke require presenting the key itself as the bearer token, proof of possession, the
+same bar Stripe and GitHub use, not a separate admin password.
+
+**Calls can carry an agent identity, kept separate from the key.** Pass `context.agent_id`
+if one key fronts more than one agent (a support bot and a billing bot, say); it is tracked
+independently of the API key on every audit row, the same way OAuth keeps a client ID
+separate from a subject claim.
 
 Two runnable clients, neither of which imports this repo's own package, since an
 external caller never would either:

@@ -5,6 +5,13 @@ with SHA-256 before storage, shown in full exactly once at creation. Key
 creation itself is rate limited per IP in process (no external service, and
 no persistence needed for something this cheap to reset on a restart) so the
 frictionless "no signup" path can't be used to mint unlimited keys.
+
+Lifecycle (revoke, rotate, expire) exists because a credential with no way
+to invalidate it is a real gap for a system whose entire pitch is being a
+trust boundary: a leaked key otherwise stays valid forever. Revoking and
+rotating both require presenting the key itself as the bearer token, the
+same "prove you hold the credential" model Stripe and GitHub use for their
+own key rotation flows, not a separate admin password.
 """
 
 from __future__ import annotations
@@ -13,6 +20,7 @@ import hashlib
 import secrets
 import time
 from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from fastapi import Depends, Header, HTTPException, status
@@ -38,6 +46,10 @@ def _hash(raw_key: str) -> str:
     return hashlib.sha256(raw_key.encode()).hexdigest()
 
 
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
 def generate_raw_key() -> str:
     return f"{KEY_PREFIX}{secrets.token_urlsafe(_TOKEN_BYTES)}"
 
@@ -59,14 +71,45 @@ def check_creation_rate_limit(client_ip: str) -> None:
 
 
 async def create_key(
-    session: AsyncSession, *, owner_label: str = "anonymous"
+    session: AsyncSession,
+    *,
+    owner_label: str = "anonymous",
+    policy_id: str = "default",
+    expires_in_days: int | None = None,
 ) -> tuple[ApiKey, str]:
     raw_key = generate_raw_key()
-    row = ApiKey(id=str(uuid4()), key_hash=_hash(raw_key), owner_label=owner_label)
+    expires_at = _now() + timedelta(days=expires_in_days) if expires_in_days else None
+    row = ApiKey(
+        id=str(uuid4()),
+        key_hash=_hash(raw_key),
+        owner_label=owner_label,
+        policy_id=policy_id,
+        expires_at=expires_at,
+    )
     session.add(row)
     await session.commit()
     await session.refresh(row)
     return row, raw_key
+
+
+async def _lookup_by_raw_key(session: AsyncSession, raw_key: str) -> ApiKey | None:
+    result = await session.execute(select(ApiKey).where(ApiKey.key_hash == _hash(raw_key)))
+    return result.scalar_one_or_none()
+
+
+def _is_live(row: ApiKey | None) -> bool:
+    if row is None or row.revoked_at is not None:
+        return False
+    if row.expires_at is not None:
+        # SQLite drops tzinfo on round-trip even though the value was
+        # written as UTC-aware; every datetime this table stores is UTC,
+        # so a naive value read back is assumed to be UTC, not local time.
+        expires_at = row.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=UTC)
+        if expires_at <= _now():
+            return False
+    return True
 
 
 async def require_api_key(
@@ -80,10 +123,9 @@ async def require_api_key(
         )
 
     raw_key = authorization.removeprefix("Bearer ").strip()
-    result = await session.execute(select(ApiKey).where(ApiKey.key_hash == _hash(raw_key)))
-    row = result.scalar_one_or_none()
+    row = await _lookup_by_raw_key(session, raw_key)
 
-    if row is None or row.revoked_at is not None:
+    if not _is_live(row):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key.")
 
     row.request_count += 1
@@ -91,3 +133,39 @@ async def require_api_key(
     await session.commit()
     await session.refresh(row)
     return row
+
+
+async def revoke_key(session: AsyncSession, *, raw_key: str) -> ApiKey:
+    """Revoking requires presenting the key itself, the same "prove you hold
+    the credential" bar as minting or rotating one. There is no separate
+    admin path to revoke someone else's key."""
+    row = await _lookup_by_raw_key(session, raw_key)
+    if not _is_live(row):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key.")
+
+    row.revoked_at = _now()
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+    return row
+
+
+async def rotate_key(session: AsyncSession, *, raw_key: str) -> tuple[ApiKey, str]:
+    """Mints a replacement key carrying the old key's owner_label and
+    policy_id, then revokes the old one. There is a brief window where both
+    keys are simultaneously valid (the new one is committed before the old
+    one is revoked) rather than a gap where neither works."""
+    old_row = await _lookup_by_raw_key(session, raw_key)
+    if not _is_live(old_row):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key.")
+    assert old_row is not None  # narrows the type for the rest of this function
+
+    new_row, new_raw_key = await create_key(
+        session, owner_label=old_row.owner_label, policy_id=old_row.policy_id
+    )
+
+    old_row.revoked_at = _now()
+    session.add(old_row)
+    await session.commit()
+
+    return new_row, new_raw_key
