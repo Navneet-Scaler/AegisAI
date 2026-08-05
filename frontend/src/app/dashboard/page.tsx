@@ -64,12 +64,20 @@ export default function DashboardPage() {
           </Link>
           <h1 className="mt-3 text-2xl font-semibold tracking-tight">Live decision feed</h1>
         </div>
-        <Link
-          href="/analytics"
-          className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--text)]"
-        >
-          View analytics
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/policy"
+            className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--text)]"
+          >
+            Edit policy
+          </Link>
+          <Link
+            href="/analytics"
+            className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--text)]"
+          >
+            View analytics
+          </Link>
+        </div>
       </div>
 
       <div className="mt-5">

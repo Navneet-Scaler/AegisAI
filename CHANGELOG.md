@@ -4,6 +4,37 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.6.0]
+
+### Added
+- Rule authoring UI with dry-run, at `/policy` in the dashboard, plus the
+  API underneath it usable directly:
+  - `GET /v1/policies/{id}/rules`, `GET /v1/policies/{id}/versions`
+  - `POST /v1/policies/{id}/dry-run`: re-evaluates proposed rules against
+    the most recent resolved calls actually scored under that policy, no
+    side effects, no auth required. The WAF "count mode before block
+    mode" pattern: see the blast radius before committing.
+  - `POST /v1/policies/{id}/draft` and
+    `POST /v1/policies/{id}/versions/{v}/activate`: both require the demo
+    token. Every save is a new `PolicyVersion`, never an in-place edit;
+    rollback is activating an older version again.
+- `ToolCall.policy_id` records which policy actually scored a call, so a
+  dry run compares against the calls that were really scored under that
+  policy, not the whole call log.
+- `POST /demo/reset` now also clears saved policy versions.
+
+### Fixed
+- A real bug caught while testing dry-run: comparing a proposed policy's
+  output against `ToolCall.verdict` was wrong, since that field can be
+  mutated later by a timeout or a human approval and no longer reflects
+  what the rule layer itself decided at scoring time. Dry-run now compares
+  against `matched_rule_ids`, which is never touched after the fact.
+- Test isolation: activating a policy version is durable state shared
+  across the whole test run's SQLite file, unlike the mostly-additive rows
+  other tests rely on; added an autouse fixture that resets
+  `PolicyVersion` between tests so one test's activated policy can't leak
+  into an unrelated one.
+
 ## [0.5.0]
 
 ### Added

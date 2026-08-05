@@ -12,6 +12,7 @@ from aegis.api.agent import router as agent_router
 from aegis.api.analytics import router as analytics_router
 from aegis.api.calls import router as calls_router
 from aegis.api.demo import router as demo_router
+from aegis.api.policy import router as policy_router
 from aegis.api.stream import router as stream_router
 from aegis.api.v1 import router as v1_router
 from aegis.config import get_settings
@@ -62,7 +63,7 @@ app = FastAPI(
         "judge, and returns allow, hold, or block. Mint a key at POST /v1/keys, "
         "no signup required."
     ),
-    version="0.5.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -89,6 +90,7 @@ app.include_router(agent_router)
 app.include_router(analytics_router)
 app.include_router(calls_router)
 app.include_router(demo_router)
+app.include_router(policy_router)
 app.include_router(stream_router)
 app.include_router(v1_router)
 

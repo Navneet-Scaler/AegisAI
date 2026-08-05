@@ -31,6 +31,8 @@ export interface ModelSnapshot {
   update_count: number;
   feature_names: string[];
   weights: number[];
+  drift_detected: boolean;
+  last_drift_magnitude: number;
 }
 
 export interface VerdictBreakdown {
@@ -43,6 +45,47 @@ export interface ToolBreakdown {
   total: number;
   blocked: number;
   held: number;
+}
+
+export interface PolicyRule {
+  id: string;
+  description?: string;
+  match: Record<string, unknown>;
+  score?: number;
+  force?: "hold" | "block";
+}
+
+export interface PolicyRulesResponse {
+  policy_id: string;
+  rules: PolicyRule[];
+  source: "seed" | "saved";
+}
+
+export interface PolicyVersionSummary {
+  id: string;
+  version: number;
+  description: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
+}
+
+export interface DryRunCallResult {
+  call_id: string;
+  tool_name: string;
+  actual_verdict_tier: string;
+  proposed_forced_verdict: string | null;
+  matched_rule_ids: string[];
+  changed: boolean;
+}
+
+export interface DryRunResult {
+  sample_size: number;
+  would_change: number;
+  newly_forced_hold: number;
+  newly_forced_block: number;
+  no_longer_forced: number;
+  results: DryRunCallResult[];
 }
 
 class ApiError extends Error {
@@ -95,6 +138,28 @@ export const api = {
   modelSnapshot: () => request<ModelSnapshot>("/analytics/model"),
   verdictBreakdown: () => request<VerdictBreakdown[]>("/analytics/verdicts"),
   toolBreakdown: () => request<ToolBreakdown[]>("/analytics/tools"),
+
+  listPolicyIds: () => request<string[]>("/v1/policies"),
+  policyRules: (policyId: string) =>
+    request<PolicyRulesResponse>(`/v1/policies/${policyId}/rules`),
+  policyVersions: (policyId: string) =>
+    request<PolicyVersionSummary[]>(`/v1/policies/${policyId}/versions`),
+  dryRunPolicy: (policyId: string, rules: PolicyRule[]) =>
+    request<DryRunResult>(`/v1/policies/${policyId}/dry-run`, {
+      method: "POST",
+      body: JSON.stringify({ rules }),
+    }),
+  savePolicyDraft: (policyId: string, rules: PolicyRule[], description: string, token: string) =>
+    request<PolicyVersionSummary>(`/v1/policies/${policyId}/draft`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ rules, description }),
+    }),
+  activatePolicyVersion: (policyId: string, versionId: string, token: string) =>
+    request<PolicyVersionSummary>(`/v1/policies/${policyId}/versions/${versionId}/activate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 
   streamUrl: () => `${API_URL}/stream`,
 };

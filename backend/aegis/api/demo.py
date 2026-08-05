@@ -15,7 +15,7 @@ from sqlmodel import delete
 from aegis.aegisai import model_store
 from aegis.auth import require_demo_token
 from aegis.db import get_session
-from aegis.models import AgentSession, ModelState, ToolCall
+from aegis.models import AgentSession, ModelState, PolicyVersion, ToolCall
 from aegis.tools.crm import reset_demo_data
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -26,6 +26,10 @@ async def reset(session: AsyncSession = Depends(get_session)) -> dict[str, str]:
     await session.execute(delete(ToolCall))
     await session.execute(delete(AgentSession))
     await session.execute(delete(ModelState))
+    # Policy edits made through the dashboard are demo state too: without
+    # this, the next visitor to a shared public demo inherits whatever
+    # rule changes the last one saved and activated.
+    await session.execute(delete(PolicyVersion))
     await session.commit()
 
     reset_demo_data()

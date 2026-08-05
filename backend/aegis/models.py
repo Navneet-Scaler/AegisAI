@@ -48,6 +48,10 @@ class ToolCall(SQLModel, table=True):
     # that was actually presented. Null for calls made through the internal
     # ReAct demo loop, which has no API key at all.
     api_key_id: str | None = Field(default=None, index=True)
+    # Which policy actually scored this call, so a later dry run can compare
+    # a proposed policy edit against the calls that were really scored
+    # under it, not the whole call log regardless of which policy applied.
+    policy_id: str = Field(default="default", index=True)
     tool_name: str = Field(index=True)
     arguments: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     step_index: int = 0
@@ -77,13 +81,29 @@ class ToolCall(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_now, index=True)
 
 
-class PolicyRule(SQLModel, table=True):
+class PolicyVersion(SQLModel, table=True):
+    """A saved edit to a policy's rule set, versioned rather than
+    overwritten in place: policy changes get the same rigor as code
+    changes, a reviewable diff and a rollback path, not a silent
+    in-place edit to the file every key scored against that policy relies
+    on. Exactly one version per `policy_id` has `is_active=True` at a time;
+    activating a new one deactivates whichever was active before, and
+    rolling back is just activating an older version again.
+
+    `policy_id` values that were never edited through this table have no
+    rows here at all; `aegisai/policy_store.py` falls back to the YAML
+    file under `seed/policies/<policy_id>.yaml` for those, so shipping a
+    new policy file continues to work without a database write.
+    """
+
     id: str = Field(primary_key=True)
-    name: str
-    description: str
-    enabled: bool = True
-    definition: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=_now)
+    policy_id: str = Field(index=True)
+    version: int
+    rules: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    description: str = ""
+    created_by: str = "dashboard"
+    created_at: datetime = Field(default_factory=_now, index=True)
+    is_active: bool = Field(default=False, index=True)
 
 
 class ModelState(SQLModel, table=True):

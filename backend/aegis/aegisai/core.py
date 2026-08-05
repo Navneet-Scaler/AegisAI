@@ -17,7 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aegis.aegisai import approvals
 from aegis.aegisai import judge as judge_layer
 from aegis.aegisai import patterns as pattern_layer
-from aegis.aegisai.rules import CallContext, evaluate, load_rules
+from aegis.aegisai.policy_store import get_active_rules
+from aegis.aegisai.rules import CallContext, evaluate
 from aegis.aegisai.scoring import composite
 from aegis.models import CallStatus, ToolCall, Verdict
 from aegis.tools.registry import registry
@@ -46,6 +47,7 @@ async def guard(
         session_id=session_id,
         agent_name=agent_name,
         api_key_id=api_key_id,
+        policy_id=policy_id,
         tool_name=tool_name,
         arguments=arguments,
         step_index=step_index,
@@ -138,7 +140,7 @@ async def _score(
     tool = registry.require(tool_name)
     context = CallContext(tool=tool, arguments=arguments)
 
-    rules = load_rules(policy_id)
+    rules = await get_active_rules(session, policy_id)
     rule_outcome = evaluate(context, rules)
     call.rule_score = rule_outcome.score
     call.matched_rules = rule_outcome.matched_rule_ids

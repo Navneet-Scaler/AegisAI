@@ -21,27 +21,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from aegis.aegisai import judge as judge_layer
 from aegis.aegisai import patterns as pattern_layer
-from aegis.aegisai.rules import CallContext, evaluate, load_rules
+from aegis.aegisai.policy_store import get_active_rules
+from aegis.aegisai.rules import CallContext, evaluate
 from aegis.aegisai.scoring import composite
 from aegis.models import CallStatus, ToolCall, Verdict
-from aegis.tools.registry import Tool, registry
-
-# An external caller's tool is not in the internal registry and carries no
-# destructiveness hint in the request schema. "write" is the moderate
-# default: not as trusting as "read", not as alarmist as "destructive".
-_EXTERNAL_DEFAULT_DESTRUCTIVENESS = "write"
-
-
-def _resolve_tool(tool_name: str) -> Tool:
-    known = registry.get(tool_name)
-    if known is not None:
-        return known
-    return Tool(
-        name=tool_name,
-        description="External tool, not in AegisAI's own registry.",
-        destructiveness=_EXTERNAL_DEFAULT_DESTRUCTIVENESS,
-        fn=lambda **_: None,
-    )
+from aegis.tools.registry import resolve_or_external
 
 
 async def score_public_call(
@@ -67,6 +51,7 @@ async def score_public_call(
         session_id=f"api:{api_key_id}",
         agent_name=resolved_agent_name,
         api_key_id=api_key_id,
+        policy_id=policy_id,
         tool_name=tool_name,
         arguments=arguments,
         step_index=0,
@@ -74,10 +59,10 @@ async def score_public_call(
     )
 
     try:
-        tool = _resolve_tool(tool_name)
+        tool = resolve_or_external(tool_name)
         context = CallContext(tool=tool, arguments=arguments)
 
-        rules = load_rules(policy_id)
+        rules = await get_active_rules(session, policy_id)
         rule_outcome = evaluate(context, rules)
         call.rule_score = rule_outcome.score
         call.matched_rules = rule_outcome.matched_rule_ids
