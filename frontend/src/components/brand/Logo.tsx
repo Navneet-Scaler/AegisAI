@@ -8,21 +8,40 @@ export function LogoMark({ size = 28, className }: { size?: number; className?: 
       className={className}
       aria-hidden
     >
-      <path
-        d="M16 2 L28 7 V15 C28 22.5 23 27.5 16 30 C9 27.5 4 22.5 4 15 V7 Z"
+      {/* The checkpoint: a rounded gate every call passes through. */}
+      <rect
+        x="3"
+        y="3"
+        width="26"
+        height="26"
+        rx="8"
         stroke="var(--brand)"
         strokeWidth="2"
-        strokeLinejoin="round"
         fill="var(--brand-glow)"
       />
-      {/* The gate: a call is either let through, or stopped at the line. */}
+      {/* One call comes in, and is routed: through, or held at the gate. */}
       <path
-        d="M11 16 L14.5 19.5 L21.5 12"
+        d="M8 16 H14"
         stroke="var(--brand)"
-        strokeWidth="2.25"
+        strokeWidth="2"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
+      <circle cx="14" cy="16" r="1.6" fill="var(--brand)" />
+      <path
+        d="M14 16 L21 10"
+        stroke="var(--brand)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 16 L21 22"
+        stroke="var(--brand)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeOpacity="0.45"
+      />
+      <circle cx="21.5" cy="9.5" r="1.9" fill="var(--brand)" />
+      <circle cx="21.5" cy="22.5" r="1.9" stroke="var(--brand)" strokeWidth="1.6" fill="var(--bg)" />
     </svg>
   );
 }

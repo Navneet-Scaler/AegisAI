@@ -7,16 +7,19 @@ import { api, ApiError } from "@/lib/api";
 import type { FeedCall } from "@/lib/feedStore";
 
 import { ScoreBar } from "./ScoreBar";
+import type { ToastTone } from "./Toast";
 import { VerdictBadge } from "./VerdictBadge";
 
 export function CallDetail({
   call,
   token,
   onDecided,
+  notify,
 }: {
   call: FeedCall | null;
   token: string;
   onDecided: () => void;
+  notify: (text: string, tone?: ToastTone) => void;
 }) {
   const [pending, setPending] = useState<"approve" | "block" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,13 +32,15 @@ export function CallDetail({
     setPending(approve ? "approve" : "block");
     try {
       await api.decide(call.id, approve, token);
+      notify(approve ? `Approved ${call.tool_name}` : `Blocked ${call.tool_name}`, approve ? "success" : "info");
       onDecided();
     } catch (err) {
-      setError(
+      const message =
         err instanceof ApiError && err.status === 401
           ? "That token was rejected. Check it and try again."
-          : "The decision could not be sent."
-      );
+          : "The decision could not be sent.";
+      setError(message);
+      notify(message, "error");
     } finally {
       setPending(null);
     }
@@ -122,7 +127,7 @@ export function CallDetail({
                 <button
                   onClick={() => decide(true)}
                   disabled={pending !== null}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-medium text-[var(--bg)] transition-opacity disabled:opacity-50"
+                  className="flex-1 rounded-lg py-2.5 text-sm font-medium text-[var(--bg)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_-4px_var(--allow)] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   style={{ background: "var(--allow)" }}
                 >
                   {pending === "approve" ? "Approving..." : "Approve (A)"}
@@ -130,7 +135,7 @@ export function CallDetail({
                 <button
                   onClick={() => decide(false)}
                   disabled={pending !== null}
-                  className="flex-1 rounded-lg py-2.5 text-sm font-medium text-[var(--bg)] transition-opacity disabled:opacity-50"
+                  className="flex-1 rounded-lg py-2.5 text-sm font-medium text-[var(--bg)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_-4px_var(--block)] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   style={{ background: "var(--block)" }}
                 >
                   {pending === "block" ? "Blocking..." : "Block (B)"}

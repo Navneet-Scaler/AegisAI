@@ -6,15 +6,18 @@ import { useEffect, useState } from "react";
 import { CallCard } from "@/components/dashboard/CallCard";
 import { CallDetail } from "@/components/dashboard/CallDetail";
 import { DemoControls } from "@/components/dashboard/DemoControls";
+import { ToastStack } from "@/components/dashboard/Toast";
 import { api } from "@/lib/api";
 import { connectFeed, useFeedStore } from "@/lib/feedStore";
 import { useToken } from "@/lib/useToken";
+import { useToasts } from "@/lib/useToasts";
 
 export default function DashboardPage() {
   const calls = useFeedStore((s) => s.calls);
   const connected = useFeedStore((s) => s.connected);
   const upsert = useFeedStore((s) => s.upsert);
   const { token, setToken } = useToken();
+  const { toasts, push: notify } = useToasts();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,7 +73,12 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-5">
-        <DemoControls token={token} onTokenChange={setToken} connected={connected} />
+        <DemoControls
+          token={token}
+          onTokenChange={setToken}
+          connected={connected}
+          notify={notify}
+        />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1.1fr]">
@@ -95,9 +103,10 @@ export default function DashboardPage() {
         </ul>
 
         <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-          <CallDetail call={selected} token={token} onDecided={() => {}} />
+          <CallDetail call={selected} token={token} onDecided={() => {}} notify={notify} />
         </div>
       </div>
+      <ToastStack toasts={toasts} />
     </main>
   );
 }

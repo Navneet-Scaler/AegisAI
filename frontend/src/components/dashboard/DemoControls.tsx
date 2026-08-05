@@ -3,33 +3,43 @@
 import { useState } from "react";
 
 import { api } from "@/lib/api";
+import type { ToastTone } from "./Toast";
+
+function Spinner() {
+  return (
+    <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 export function DemoControls({
   token,
   onTokenChange,
   connected,
+  notify,
 }: {
   token: string;
   onTokenChange: (value: string) => void;
   connected: boolean;
+  notify: (text: string, tone?: ToastTone) => void;
 }) {
   const [running, setRunning] = useState<"refund" | "delete" | null>(null);
   const [resetting, setResetting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const runAgent = async (scenario: "refund" | "delete") => {
     setRunning(scenario);
-    setMessage(null);
     try {
       if (scenario === "refund") {
         await api.runAgent("Please refund the duplicate charge on ticket TCK-4417.", "demo-agent", "refund");
-        setMessage("Run started, watch the feed.");
+        notify("Refund run started, watch the feed.", "success");
       } else {
         await api.runAgent("Please remove the requested customer record.", "demo-agent", "delete");
-        setMessage("Run started. This one gets held, approve or block it in the feed.");
+        notify("Delete run started, it will be held for review.", "info");
       }
     } catch {
-      setMessage("Could not start a run.");
+      notify("Could not start a run.", "error");
     } finally {
       setRunning(null);
     }
@@ -37,16 +47,15 @@ export function DemoControls({
 
   const resetDemo = async () => {
     if (!token) {
-      setMessage("Set the demo token first.");
+      notify("Set the demo token first.", "error");
       return;
     }
     setResetting(true);
-    setMessage(null);
     try {
       await api.resetDemo(token);
-      setMessage("Demo state reset.");
+      notify("Demo state reset.", "success");
     } catch {
-      setMessage("Reset failed, check the token.");
+      notify("Reset failed, check the token.", "error");
     } finally {
       setResetting(false);
     }
@@ -61,7 +70,10 @@ export function DemoControls({
         <span
           aria-hidden
           className="h-1.5 w-1.5 rounded-full"
-          style={{ background: connected ? "var(--allow)" : "var(--faint)" }}
+          style={{
+            background: connected ? "var(--allow)" : "var(--faint)",
+            boxShadow: connected ? "0 0 0 3px color-mix(in srgb, var(--allow) 25%, transparent)" : "none",
+          }}
         />
         {connected ? "Live" : "Connecting"}
       </span>
@@ -69,24 +81,27 @@ export function DemoControls({
       <button
         onClick={() => runAgent("refund")}
         disabled={running !== null}
-        className="rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:border-[var(--allow)] hover:bg-[var(--surface-2)] disabled:opacity-50"
       >
+        {running === "refund" && <Spinner />}
         {running === "refund" ? "Starting..." : "Run refund (auto allowed)"}
       </button>
 
       <button
         onClick={() => runAgent("delete")}
         disabled={running !== null}
-        className="rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:border-[var(--hold)] hover:bg-[var(--surface-2)] disabled:opacity-50"
       >
+        {running === "delete" && <Spinner />}
         {running === "delete" ? "Starting..." : "Run delete (gets held)"}
       </button>
 
       <button
         onClick={resetDemo}
         disabled={resetting}
-        className="rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
       >
+        {resetting && <Spinner />}
         {resetting ? "Resetting..." : "Reset demo"}
       </button>
 
@@ -95,10 +110,8 @@ export function DemoControls({
         placeholder="Demo token"
         value={token}
         onChange={(e) => onTokenChange(e.target.value)}
-        className="w-40 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text)] placeholder:text-[var(--faint)]"
+        className="w-40 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-[var(--faint)] focus:border-[var(--accent)]"
       />
-
-      {message && <span className="text-xs text-[var(--faint)]">{message}</span>}
     </div>
   );
 }
