@@ -4,6 +4,31 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.8.0]
+
+### Added
+- `/quickstart`: a dedicated docs page, separate from the marketing landing page, with
+  copy-paste integration snippets (curl, plain Python, OpenAI function calling,
+  LangChain, MCP) reusing the landing page's terminal-style code block component.
+- `WRITEUP.md`: a standalone public writeup of the "constrain the architecture, not
+  the prompt" thesis, grounded in OWASP's prompt injection / excessive agency
+  taxonomy, walking through `backend/tests/test_prompt_injection.py` as the concrete
+  evidence for the claim. Linked prominently from the README.
+- A third dashboard scenario ("Run prompt injection"), reachable through
+  `POST /agent/run`, driving the same TCK-4419 injected-ticket scenario the test
+  suite already proves, so it can be watched live and recorded, not only asserted in
+  a test. `docs/assets/case-study-injection.gif` captures it end to end: an agent
+  reads the injected ticket, proposes the resulting `update_billing` call, AegisAI
+  holds it, and a human reviewing the judge's reasoning blocks it.
+
+### Changed
+- The TCK-4419 scenario's injected credit amount moved from $50 to $300 (still well
+  under the $500 large-refund rule threshold, so the "no rule catches this" claim is
+  unaffected) after live-running the scenario surfaced that $50 produced a composite
+  score just under the hold threshold once the online pattern layer was included at
+  its real, non-neutral baseline, rather than the fixed 0.1 the unit tests use to
+  isolate the judge's signal specifically.
+
 ## [0.7.1]
 
 Foundation hardening surfaced by a close audit, applied before further outward-facing
