@@ -294,13 +294,19 @@ directly.
 | Storage | SQLite locally, Postgres in deployment |
 | Dashboard | Next.js App Router, TypeScript, Tailwind, Framer Motion, Recharts |
 | Auth | Self-built API keys (SHA-256 hashed, shown once), no third-party auth provider |
-| Rate limiting | `slowapi`, in process, no external service |
+| Rate limiting | `slowapi`, in process (see caveat below) |
 | Deployment | Single Vercel project (frontend + backend as two services, same origin), Docker Compose locally, Railway as an alternative backend host |
 
 Every piece above runs on a free tier with no credit card: Vercel's Hobby plan, Gemini's
 free API tier (judge calls are opt in and default to a mock provider), GitHub Actions'
 free tier for public repos, and SQLite or any free-tier Postgres (Neon, Vercel Postgres)
 for storage. Nothing here requires a paid plan to run or to deploy.
+
+**Rate limiting caveat:** the per-key and per-IP limits are enforced with in-process
+counters. On a long-lived single instance (Docker Compose, Railway) that holds; on a
+serverless deployment, each cold function invocation starts a fresh process, and those
+counters reset with it. Treat the advertised limits as accurate for the single-instance
+deployment path, not the serverless one, until this moves to a shared backing store.
 
 ## How to run
 

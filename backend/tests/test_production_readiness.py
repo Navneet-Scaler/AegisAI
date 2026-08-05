@@ -47,3 +47,38 @@ async def test_app_refuses_to_start_on_sqlite_in_production(monkeypatch):
         import aegis.main as main_module
 
         importlib.reload(main_module)
+
+
+async def test_app_refuses_to_start_on_the_default_demo_token_in_production(monkeypatch):
+    """AEGIS_DEMO_TOKEN defaults to a value printed in this repo's own
+    README. Shipping that default unchanged to production would make the
+    one endpoint that can turn a held call into an executed one effectively
+    unauthenticated, the same class of silent failure the SQLite check
+    guards against for the data layer."""
+    monkeypatch.setenv("AEGIS_ENVIRONMENT", "production")
+    monkeypatch.setenv("AEGIS_DATABASE_URL", "postgresql+asyncpg://user:pass@host/db")
+    monkeypatch.delenv("AEGIS_DEMO_TOKEN", raising=False)
+
+    from aegis.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        import importlib
+
+        import aegis.main as main_module
+
+        importlib.reload(main_module)
+
+        from fastapi.testclient import TestClient
+
+        with pytest.raises(RuntimeError, match="AEGIS_DEMO_TOKEN"):
+            with TestClient(main_module.app):
+                pass
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()
+        import importlib
+
+        import aegis.main as main_module
+
+        importlib.reload(main_module)

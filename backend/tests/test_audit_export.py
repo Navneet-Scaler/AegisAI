@@ -92,3 +92,30 @@ def test_export_is_never_mutated_by_filtering_the_underlying_data():
         filtered_row = filtered[0]
         matching_unfiltered = next(r for r in unfiltered if r["call_id"] == filtered_row["call_id"])
         assert filtered_row == matching_unfiltered
+
+
+def test_export_neutralizes_leading_formula_characters():
+    """agent_name is entirely caller-controlled: anyone hitting POST
+    /agent/run picks it. A value like '=cmd|...' opened in Excel or Sheets
+    would be evaluated as a formula the moment the exported CSV is opened,
+    exactly the kind of injection an audit export must not carry forward."""
+    with TestClient(app) as client:
+        client.post(
+            "/agent/run",
+            json={
+                "request": "Refund ticket TCK-4417.",
+                "scenario": "refund",
+                "agent_name": '=cmd|"/c calc"!A1',
+            },
+        )
+
+        response = client.get("/calls/export.csv")
+        reader = csv.DictReader(io.StringIO(response.text))
+        rows = list(reader)
+
+        injected = [r for r in rows if r["agent_name"].endswith('cmd|"/c calc"!A1')]
+        assert injected, "expected the injected agent_name row in the export"
+        assert injected[0]["agent_name"].startswith("'="), (
+            "a leading apostrophe should force spreadsheet software to treat "
+            "this cell as literal text, not a formula"
+        )

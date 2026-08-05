@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -31,6 +32,22 @@ router = APIRouter(prefix="/calls", tags=["calls"])
 async def list_calls(session: AsyncSession = Depends(get_session)) -> list[ToolCall]:
     result = await session.execute(select(ToolCall).order_by(ToolCall.created_at.desc()))
     return list(result.scalars().all())
+
+
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: str) -> str:
+    """Excel and Sheets treat a leading =, +, -, @, tab, or carriage return
+    as the start of a formula, evaluated the moment the file is opened. The
+    fields this guards (agent name, tool arguments, judge reasoning, failure
+    reason) can all contain attacker-influenced text, an injected ticket
+    body echoed back into judge_reasoning being the exact scenario this
+    export exists to make auditable. A leading apostrophe forces spreadsheet
+    software to treat the cell as literal text, the standard mitigation."""
+    if value and value[0] in _FORMULA_PREFIXES:
+        return f"'{value}"
+    return value
 
 
 _EXPORT_COLUMNS = [
@@ -99,21 +116,21 @@ async def export_calls_csv(
                 row.id,
                 row.created_at.isoformat(),
                 row.decided_at.isoformat() if row.decided_at else "",
-                row.agent_name,
+                _csv_safe(row.agent_name),
                 row.api_key_id or "",
                 row.policy_id,
                 row.tool_name,
-                str(row.arguments),
+                _csv_safe(str(row.arguments)),
                 row.verdict.value,
                 row.composite_score if row.composite_score is not None else "",
                 row.rule_score if row.rule_score is not None else "",
                 row.pattern_score if row.pattern_score is not None else "",
                 row.judge_score if row.judge_score is not None else "",
                 ";".join(row.matched_rules),
-                row.judge_reasoning or "",
+                _csv_safe(row.judge_reasoning or ""),
                 row.decided_by or "",
                 row.executed,
-                row.failure_reason or "",
+                _csv_safe(row.failure_reason or ""),
             ]
         )
 
@@ -147,20 +164,35 @@ class DecisionRequest(BaseModel):
 async def decide_call(
     call_id: str, payload: DecisionRequest, session: AsyncSession = Depends(get_session)
 ) -> ToolCall:
-    call = await session.get(ToolCall, call_id)
-    if call is None:
-        raise HTTPException(status_code=404, detail="Call not found.")
-    if call.status == CallStatus.RESOLVED:
+    # A single UPDATE with status == PENDING in its WHERE clause, rather than
+    # a session.get() read followed by a later write, closes the race where
+    # two concurrent decisions on the same call both pass a status check
+    # before either commits. The database, not this coroutine, is what
+    # decides whether a row is still pending, and it decides atomically:
+    # only one concurrent request can ever match the WHERE clause and update
+    # the row. Without this, two contradictory decisions could both reach
+    # the online learner below, training it on the same feature vector with
+    # opposite labels.
+    result = await session.execute(
+        sa_update(ToolCall)
+        .where(ToolCall.id == call_id, ToolCall.status == CallStatus.PENDING)
+        .values(
+            verdict=Verdict.ALLOW if payload.approve else Verdict.BLOCK,
+            status=CallStatus.RESOLVED,
+            decided_by=payload.decided_by,
+            decided_at=datetime.now(UTC),
+        )
+    )
+    await session.commit()
+
+    if result.rowcount == 0:
+        existing = await session.get(ToolCall, call_id)
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Call not found.")
         raise HTTPException(status_code=409, detail="Call has already been resolved.")
 
-    call.verdict = Verdict.ALLOW if payload.approve else Verdict.BLOCK
-    call.status = CallStatus.RESOLVED
-    call.decided_by = payload.decided_by
-    call.decided_at = datetime.now(UTC)
-
-    session.add(call)
-    await session.commit()
-    await session.refresh(call)
+    call = await session.get(ToolCall, call_id)
+    assert call is not None
 
     # Wakes the coroutine in AegisAI.guard that is polling this row, if this
     # process is the one running it. If it is a different process, the
@@ -172,6 +204,8 @@ async def decide_call(
     # immediately, on the exact feature vector AegisAI scored at the time,
     # not a recomputation. Calls that failed before pattern scoring ran
     # never got a feature vector, so there is nothing to learn from here.
+    # This decision has already won the atomic update above, so exactly one
+    # decision for this call ever reaches the learner.
     if call.pattern_features is not None:
         model = await get_model(session)
         model.learn(call.pattern_features, risky=not payload.approve)
