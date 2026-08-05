@@ -168,9 +168,32 @@ results in a silent allow.
 |---|---|
 | Judge API error, timeout, or malformed response | hold |
 | Pattern model missing or fails to load | hold |
-| Rules file missing or fails to parse | hold, and the app refuses to start in production |
+| Rules or policy file missing or fails to parse | hold, and the app refuses to start in production |
 | Database write fails | hold, the call does not execute |
 | Human approval times out | block |
+| `AEGIS_DATABASE_URL` is SQLite in production | the app refuses to start |
+
+### A known, partly open threat model: online-learner poisoning
+
+The pattern layer learns from every human decision, which is a real strength (fast
+adaptation) and a real attack surface: a burst of decisions that all push the same
+direction, whether from a compromised reviewer or a careless one, can walk the decision
+boundary toward permissiveness a few degrees at a time. That is a textbook data-poisoning
+vulnerability for any system that learns online from a human-in-the-loop signal.
+
+`PatternModel` tracks how far the coefficient vector has moved over the last 5 decisions
+and flags it when that shift crosses a threshold (`aegis/aegisai/model.py`). While flagged,
+the pattern layer refuses to trust the classifier's own opinion and reports the neutral
+"nothing known against it" baseline instead, the same instinct as an unmatched rule. This
+is a detector, not a fix: it catches a boundary that has already moved, it does not stop a
+single bad approval from moving it a little, and the threshold is a first pass, not
+calibrated against real production traffic, since none exists yet. Verified against a live
+server that it triggers on a scripted, identical-shape burst of approvals; verified that it
+does **not** trigger on organically evolving ones, since the pattern layer's own
+`prior_approval_rate` feature naturally moderates the gradient step as a track record
+builds, which is informative on its own: this defense is strongest against a repeated,
+mechanical abuse pattern and weaker against one that varies. Documented here as an open
+problem rather than a solved one, on purpose.
 
 ## The public API
 
@@ -298,6 +321,10 @@ declares two services, `frontend` (Next.js) and `backend` (FastAPI), and rewrite
    Postgres connection string (`postgresql+asyncpg://` scheme; Vercel Postgres or any
    managed Postgres works), and `AEGIS_DEMO_TOKEN` to a real secret. Leave
    `AEGIS_LLM_MODE=replay` unless you're setting `AEGIS_GEMINI_API_KEY` for live judge calls.
+   `AEGIS_DATABASE_URL` cannot be left as SQLite here: the app checks at startup and
+   refuses to run with `AEGIS_ENVIRONMENT=production` on a SQLite URL, since SQLite does
+   not survive more than one running instance and the held-call approval flow depends on
+   durable, consistent database state.
 3. On the `frontend` service, set `NEXT_PUBLIC_API_URL=/api/backend`. Same origin, so this
    is a relative path, not a separate host.
 4. Deploy.

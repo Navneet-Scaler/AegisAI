@@ -23,6 +23,21 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # SQLite is a single-writer, single-file store: it does not survive
+    # multiple app instances behind a load balancer, and the held-call
+    # approval flow depends on database state being consistent and durable
+    # across restarts. That is fine for local dev, and refusing to start on
+    # SQLite in production is the same fail-closed instinct as the rules
+    # file check below, applied to the data layer instead of the policy
+    # layer: better to refuse to start than to serve traffic against a
+    # store that silently breaks the moment there is a second instance.
+    if settings.environment == "production" and settings.is_sqlite:
+        raise RuntimeError(
+            "AEGIS_DATABASE_URL is SQLite in a production environment. "
+            "Point it at Postgres (postgresql+asyncpg://...) before deploying; "
+            "SQLite does not survive more than one running instance."
+        )
+
     await init_db()
 
     # A policy file that fails to parse is a fail-closed condition. In
@@ -47,7 +62,7 @@ app = FastAPI(
         "judge, and returns allow, hold, or block. Mint a key at POST /v1/keys, "
         "no signup required."
     ),
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
