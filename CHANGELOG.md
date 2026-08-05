@@ -4,6 +4,26 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0]
+
+### Added
+- Online-learner poisoning defense: `PatternModel` tracks how far its
+  coefficient vector has moved over a window of recent human decisions and
+  flags it when the shift crosses a threshold. While flagged, the pattern
+  layer degrades to the neutral baseline instead of trusting its own
+  (possibly poisoned) opinion. Documented as a known, partly open threat
+  model in the README, not a fully solved one. Verified against a live
+  server: triggers on a scripted, identical-shape burst of approvals;
+  does not trigger on organically evolving ones, since
+  `prior_approval_rate` naturally moderates the gradient step as a track
+  record builds.
+- `GET /analytics/model` now reports `drift_detected` and
+  `last_drift_magnitude`.
+- The app refuses to start with `AEGIS_ENVIRONMENT=production` on a
+  SQLite `AEGIS_DATABASE_URL`. SQLite does not survive more than one
+  running instance, and the held-call approval flow depends on durable,
+  consistent database state across restarts and instances.
+
 ## [0.4.0]
 
 ### Added

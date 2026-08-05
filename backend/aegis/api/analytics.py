@@ -23,6 +23,8 @@ class ModelSnapshot(BaseModel):
     update_count: int
     feature_names: list[str]
     weights: list[float]
+    drift_detected: bool
+    last_drift_magnitude: float
 
 
 @router.get("/model", response_model=ModelSnapshot)
@@ -33,6 +35,8 @@ async def model_snapshot(session: AsyncSession = Depends(get_session)) -> ModelS
         update_count=model.update_count,
         feature_names=FEATURE_NAMES,
         weights=weights["coef"][0],
+        drift_detected=model.drift_detected,
+        last_drift_magnitude=model.last_drift_magnitude,
     )
 
 

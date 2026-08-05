@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from aegis.aegisai.features import HistorySignals, extract, shape_key
 from aegis.aegisai.model_store import get_model
 from aegis.aegisai.rules import CallContext
+from aegis.aegisai.scoring import LAYER_UNAVAILABLE_BASELINE
 from aegis.models import CallStatus, ToolCall, Verdict
 
 NEUTRAL_PRIOR_APPROVAL_RATE = 0.5
@@ -64,4 +65,14 @@ async def score(
     features = extract(context, step_index=step_index, history=history)
 
     model = await get_model(session)
+
+    if model.drift_detected:
+        # The decision boundary has moved sharply over the last window of
+        # human decisions, whether from a compromised reviewer or a
+        # careless one; the classifier's current opinion is not trusted
+        # while that flag is set. Degrade to "nothing known against it",
+        # the same baseline an unmatched rule contributes, rather than a
+        # confident number that may itself be the thing that shifted.
+        return LAYER_UNAVAILABLE_BASELINE, features
+
     return model.risk(features), features
