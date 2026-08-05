@@ -1,7 +1,7 @@
 from aegis.tools import registry
 
 
-def test_six_crm_tools_registered():
+def test_registered_tools_include_the_mock_crm_and_the_real_webhook_connector():
     assert registry.names() == sorted(
         [
             "read_ticket",
@@ -10,6 +10,7 @@ def test_six_crm_tools_registered():
             "update_billing",
             "create_refund",
             "delete_customer",
+            "send_webhook_notification",
         ]
     )
 

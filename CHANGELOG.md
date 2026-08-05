@@ -4,6 +4,25 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.0]
+
+### Added
+- `send_webhook_notification` (`aegis/tools/webhook.py`): a real, non-mock
+  tool. Every other tool in the demo is a synthetic in-memory function;
+  this one makes a genuine outbound HTTPS request to httpbin.org, a public
+  sandbox, carrying an idempotency key. Registered in the same tool
+  registry as the mock CRM tools, scored and gated by `AegisAI.guard()`
+  identically. Verified end to end against the real service, not mocked:
+  scored, allowed, executed, real HTTP 200 back.
+- `examples/openai-function-calling/assistants_agent.py`: the OpenAI
+  Assistants API variant (thread and run based, tool calls arrive via
+  `submit_tool_outputs` instead of a message's `tool_calls`), alongside
+  the existing plain function-calling `agent.py`. Shares `TOOLS`,
+  `guard()`, and `execute_tool()` rather than duplicating them.
+- `GET /calls/export.csv`: audit trail export, filterable by
+  `agent_name`, `api_key_id`, `verdict`, `tool_name`, `since`, `until`.
+  Public, no side effects. Linked from the analytics dashboard.
+
 ## [0.6.0]
 
 ### Added

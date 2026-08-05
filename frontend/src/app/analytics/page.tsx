@@ -14,7 +14,7 @@ import {
 } from "recharts";
 
 import { StatTile } from "@/components/analytics/StatTile";
-import { api, type ModelSnapshot, type ToolBreakdown, type VerdictBreakdown } from "@/lib/api";
+import { api, apiUrl, type ModelSnapshot, type ToolBreakdown, type VerdictBreakdown } from "@/lib/api";
 
 export default function AnalyticsPage() {
   const [verdicts, setVerdicts] = useState<VerdictBreakdown[]>([]);
@@ -40,12 +40,20 @@ export default function AnalyticsPage() {
 
   return (
     <main className="flex-1 mx-auto w-full max-w-6xl px-6 py-10">
-      <Link
-        href="/dashboard"
-        className="text-sm text-[var(--faint)] transition-colors hover:text-[var(--text)]"
-      >
-        Back to dashboard
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          className="text-sm text-[var(--faint)] transition-colors hover:text-[var(--text)]"
+        >
+          Back to dashboard
+        </Link>
+        <a
+          href={apiUrl("/calls/export.csv")}
+          className="rounded-lg border border-[var(--line-strong)] px-3 py-1.5 text-xs text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
+        >
+          Export audit trail (CSV)
+        </a>
+      </div>
       <h1 className="mt-3 text-2xl font-semibold tracking-tight">Analytics</h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
