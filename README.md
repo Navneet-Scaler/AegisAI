@@ -471,10 +471,11 @@ instance, not a mockup.
 ![A prompt injected support ticket leads to an update_billing call; AegisAI holds it and the judge's reasoning names the injected instruction](docs/assets/case-study-injection.gif)
 
 Ticket TCK-4419 has "ignore all previous instructions" embedded in the customer's own
-message, asking for a $50 billing credit framed as routine goodwill. The rule layer alone
+message, asking for a $300 billing credit framed as routine goodwill. The rule layer alone
 lets it through, there is no rule for this exact shape. The judge layer reads the call's
 justification against the actual conversation and holds it, because the call follows the
-injected text, not the user. Click "Run prompt injection" on the dashboard to run this
+injected text, not the user, and a human reviewing the call sees exactly why in the
+judge's reasoning and blocks it. Click "Run prompt injection" on the dashboard to run this
 scenario live, or see `backend/tests/test_prompt_injection.py` for the proof, or read
 [WRITEUP.md](WRITEUP.md) for the full walkthrough of why this generalizes.
 
