@@ -28,6 +28,9 @@ export function Nav() {
           <a href="#features" className="transition-colors hover:text-[var(--text)]">
             Features
           </a>
+          <Link href="/quickstart" className="transition-colors hover:text-[var(--text)]">
+            Quickstart
+          </Link>
           <Link href="/dashboard" className="transition-colors hover:text-[var(--text)]">
             Dashboard
           </Link>

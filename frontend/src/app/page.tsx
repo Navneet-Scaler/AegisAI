@@ -54,6 +54,15 @@ const FEATURES = [
       "Per tool and per agent risk breakdown",
     ],
   },
+  {
+    group: "Operations",
+    items: [
+      "Atomic approvals: two concurrent decisions on one call, exactly one wins",
+      "A crash mid execution can't leave the audit trail understating what ran",
+      "/health checks the database and judge credentials, not a hardcoded ok",
+      "Audit export neutralizes formula injection in exported fields",
+    ],
+  },
 ];
 
 const STATS = [
@@ -303,6 +312,51 @@ any forcing rule       ->  that verdict wins`}
           </div>
         </section>
 
+        {/* Case study: the claim above, proven against one concrete scenario */}
+        <section className="border-b border-[var(--border)]">
+          <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+            <div className="grid gap-10 lg:grid-cols-2 lg:gap-14 items-center">
+              <Reveal>
+                <h2 className="text-sm font-mono uppercase tracking-widest text-[var(--text-faint)]">
+                  Case study
+                </h2>
+                <p className="mt-6 text-3xl sm:text-4xl leading-[1.15] tracking-tight">
+                  A prompt injection, <em className="italic">caught.</em>
+                </p>
+                <p className="mt-5 max-w-md text-[var(--text-muted)] leading-relaxed">
+                  A support ticket carries &ldquo;ignore all previous instructions&rdquo;
+                  embedded in the customer&apos;s own message, asking for a $300 credit
+                  framed as routine goodwill. No rule was ever written for this exact
+                  shape, and none should have to be: the judge reads the call&apos;s
+                  justification against the actual conversation, holds it, and a human
+                  reviewing that reasoning blocks it.
+                </p>
+                <div className="mt-7 flex flex-wrap items-center gap-4">
+                  <Link
+                    href="/dashboard"
+                    className="text-sm font-medium text-[var(--text)] underline decoration-[var(--line-strong)] decoration-2 underline-offset-4 transition-colors hover:decoration-[var(--brand)]"
+                  >
+                    Run it live &rarr;
+                  </Link>
+                  <a
+                    href="https://github.com/Navneet-Scaler/AegisAI/blob/main/WRITEUP.md"
+                    className="text-sm font-medium text-[var(--text)] underline decoration-[var(--line-strong)] decoration-2 underline-offset-4 transition-colors hover:decoration-[var(--brand)]"
+                  >
+                    Read the full writeup &rarr;
+                  </a>
+                </div>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <img
+                  src="/case-study-injection.gif"
+                  alt="A prompt injected support ticket leads to an update_billing call; AegisAI holds it, the judge names the injected instruction, and a human blocks it"
+                  className="w-full rounded-xl border border-[var(--border)]"
+                />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section id="features" className="border-b border-[var(--border)] scroll-mt-16">
           <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
@@ -311,7 +365,7 @@ any forcing rule       ->  that verdict wins`}
                 What it does
               </h2>
             </Reveal>
-            <div className="mt-14 grid gap-10 md:grid-cols-3">
+            <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
               {FEATURES.map((group, i) => (
                 <Reveal key={group.group} delay={i * 0.08}>
                   <h3 className="text-base font-medium tracking-tight">{group.group}</h3>
