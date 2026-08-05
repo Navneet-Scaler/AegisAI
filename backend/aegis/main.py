@@ -47,7 +47,7 @@ app = FastAPI(
         "judge, and returns allow, hold, or block. Mint a key at POST /v1/keys, "
         "no signup required."
     ),
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 

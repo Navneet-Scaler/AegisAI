@@ -4,6 +4,25 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0]
+
+### Added
+- `examples/mcp-server/`: an MCP server whose `tools/call` is scored by
+  `POST /v1/guard` before executing, implemented against the official MCP
+  Python SDK (JSON-RPC 2.0 over stdio, pinned to `mcp>=2.0,<3`). MCP is
+  becoming the default interop layer between agent hosts and tools;
+  pointing a client at this server requires no application code changes.
+  Verified both the guard-then-forward logic directly and a real JSON-RPC
+  handshake over stdio against a live AegisAI instance.
+- `examples/langchain/`: `guard_tool()` wraps any LangChain `BaseTool`,
+  returning a real `StructuredTool` with the same name, description, and
+  args schema, a drop-in replacement in an existing tool list. Blocked
+  calls raise LangChain's own `ToolException` (caught via
+  `handle_tool_error=True` so one block doesn't crash an agent run, while
+  `on_tool_error` still fires for tracing). Verified all three verdicts
+  (allow, hold, block) against a live instance through the standard
+  `.run()` surface.
+
 ## [0.3.0]
 
 ### Added
