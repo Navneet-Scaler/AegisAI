@@ -13,7 +13,9 @@ for a human, or blocked.
 ![Next.js 16](https://img.shields.io/badge/next.js-16-black)
 ![License MIT](https://img.shields.io/badge/license-MIT-green)
 
-**[Live demo: aiaegis.vercel.app](https://aiaegis.vercel.app)**
+**[Live demo: aiaegis.vercel.app](https://aiaegis.vercel.app)** ·
+**[Quickstart: wire it into your agent in 5 minutes](https://aiaegis.vercel.app/quickstart)** ·
+**[Full writeup: constrain the architecture, not the prompt](WRITEUP.md)**
 
 </div>
 
@@ -464,9 +466,17 @@ instance, not a mockup.
 4. Approve it with the demo token. It executes, and the run completes.
 5. Run it again, the pattern layer already updated from that one decision.
 
-For the prompt injection scenario specifically (a call the rule layer alone would miss but
-the judge catches), see `backend/tests/test_prompt_injection.py`, or read the "How risk is
-scored" walkthrough above.
+## Case study: a prompt injection, caught
+
+![A prompt injected support ticket leads to an update_billing call; AegisAI holds it and the judge's reasoning names the injected instruction](docs/assets/case-study-injection.gif)
+
+Ticket TCK-4419 has "ignore all previous instructions" embedded in the customer's own
+message, asking for a $50 billing credit framed as routine goodwill. The rule layer alone
+lets it through, there is no rule for this exact shape. The judge layer reads the call's
+justification against the actual conversation and holds it, because the call follows the
+injected text, not the user. Click "Run prompt injection" on the dashboard to run this
+scenario live, or see `backend/tests/test_prompt_injection.py` for the proof, or read
+[WRITEUP.md](WRITEUP.md) for the full walkthrough of why this generalizes.
 
 ## Roadmap
 

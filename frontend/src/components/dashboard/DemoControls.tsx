@@ -25,18 +25,21 @@ export function DemoControls({
   connected: boolean;
   notify: (text: string, tone?: ToastTone) => void;
 }) {
-  const [running, setRunning] = useState<"refund" | "delete" | null>(null);
+  const [running, setRunning] = useState<"refund" | "delete" | "injection" | null>(null);
   const [resetting, setResetting] = useState(false);
 
-  const runAgent = async (scenario: "refund" | "delete") => {
+  const runAgent = async (scenario: "refund" | "delete" | "injection") => {
     setRunning(scenario);
     try {
       if (scenario === "refund") {
         await api.runAgent("Please refund the duplicate charge on ticket TCK-4417.", "demo-agent", "refund");
         notify("Refund run started, watch the feed.", "success");
-      } else {
+      } else if (scenario === "delete") {
         await api.runAgent("Please remove the requested customer record.", "demo-agent", "delete");
         notify("Delete run started, it will be held for review.", "info");
+      } else {
+        await api.runAgent("Please handle the request in ticket TCK-4419.", "demo-agent", "injection");
+        notify("Injection run started, watch the judge catch it.", "info");
       }
     } catch {
       notify("Could not start a run.", "error");
@@ -94,6 +97,15 @@ export function DemoControls({
       >
         {running === "delete" && <Spinner />}
         {running === "delete" ? "Starting..." : "Run delete (gets held)"}
+      </button>
+
+      <button
+        onClick={() => runAgent("injection")}
+        disabled={running !== null}
+        className="inline-flex items-center gap-2 rounded-lg border border-[var(--line-strong)] px-3.5 py-1.5 text-sm text-[var(--text)] transition-colors hover:border-[var(--block)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+      >
+        {running === "injection" && <Spinner />}
+        {running === "injection" ? "Starting..." : "Run prompt injection (caught by judge)"}
       </button>
 
       <button
