@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
-from aegis.aegisai.rules import load_rules
+from aegis.aegisai.rules import list_policy_ids, load_rules
 from aegis.api.agent import router as agent_router
 from aegis.api.analytics import router as analytics_router
 from aegis.api.calls import router as calls_router
@@ -25,11 +25,14 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     await init_db()
 
-    # A rules file that fails to parse is a fail-closed condition. In
+    # A policy file that fails to parse is a fail-closed condition. In
     # production the app refuses to start rather than serving traffic that
-    # would fall back to a per-request hold on every single call.
+    # would fall back to a per-request hold on every single call. Every
+    # policy on disk is validated, not just "default": a key scoped to a
+    # broken policy must never be discovered at request time.
     try:
-        load_rules()
+        for policy_id in list_policy_ids() or ["default"]:
+            load_rules(policy_id)
     except Exception:
         if settings.environment == "production":
             raise
@@ -44,7 +47,7 @@ app = FastAPI(
         "judge, and returns allow, hold, or block. Mint a key at POST /v1/keys, "
         "no signup required."
     ),
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 

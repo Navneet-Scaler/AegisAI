@@ -42,6 +42,12 @@ class ToolCall(SQLModel, table=True):
     id: str = Field(primary_key=True)
     session_id: str = Field(index=True)
     agent_name: str = Field(default="demo-agent", index=True)
+    # The authenticating API key, kept separate from agent_name the same way
+    # OAuth keeps a client ID separate from a subject claim: agent_name is
+    # who the caller says is making the call, api_key_id is the credential
+    # that was actually presented. Null for calls made through the internal
+    # ReAct demo loop, which has no API key at all.
+    api_key_id: str | None = Field(default=None, index=True)
     tool_name: str = Field(index=True)
     arguments: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     step_index: int = 0
@@ -98,6 +104,13 @@ class ApiKey(SQLModel, table=True):
     id: str = Field(primary_key=True)
     key_hash: str = Field(index=True, unique=True)
     owner_label: str = "anonymous"
+    # Which rule set (backend/aegis/seed/policies/<policy_id>.yaml) this
+    # key's calls are scored against. Defaults to the most restrictive
+    # baseline, not the most permissive, consistent with this project's
+    # fail-closed philosophy: a new key should have to be deliberately
+    # given a looser policy, never inherit one by accident.
+    policy_id: str = "default"
     created_at: datetime = Field(default_factory=_now)
     revoked_at: datetime | None = None
+    expires_at: datetime | None = None
     request_count: int = 0

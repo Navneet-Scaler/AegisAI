@@ -48,15 +48,25 @@ async def score_public_call(
     *,
     session: AsyncSession,
     owner_label: str,
+    api_key_id: str,
+    policy_id: str,
     tool_name: str,
     arguments: dict[str, Any],
     user_request: str,
     history: list[dict],
+    agent_name: str | None = None,
 ) -> ToolCall:
+    # agent_name is who the caller says is making the call; owner_label is
+    # who the key belongs to. They usually match for a single-agent
+    # integration but must not be conflated: one key can front several
+    # agents, and holds/audit need to tell them apart.
+    resolved_agent_name = agent_name or owner_label
+
     call = ToolCall(
         id=str(uuid4()),
-        session_id=f"api:{owner_label}",
-        agent_name=owner_label,
+        session_id=f"api:{api_key_id}",
+        agent_name=resolved_agent_name,
+        api_key_id=api_key_id,
         tool_name=tool_name,
         arguments=arguments,
         step_index=0,
@@ -67,14 +77,14 @@ async def score_public_call(
         tool = _resolve_tool(tool_name)
         context = CallContext(tool=tool, arguments=arguments)
 
-        rules = load_rules()
+        rules = load_rules(policy_id)
         rule_outcome = evaluate(context, rules)
         call.rule_score = rule_outcome.score
         call.matched_rules = rule_outcome.matched_rule_ids
         call.forced_by_rule = rule_outcome.forced_verdict is not None
 
         pattern_score, pattern_features = await pattern_layer.score(
-            context, session=session, agent_name=owner_label, step_index=0
+            context, session=session, agent_name=resolved_agent_name, step_index=0
         )
         call.pattern_score = pattern_score
         call.pattern_features = pattern_features

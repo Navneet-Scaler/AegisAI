@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0]
+
+### Added
+- Per-key scoped policy: `ApiKey.policy_id` attaches a named rule set
+  (`backend/aegis/seed/policies/<id>.yaml`) to each key instead of one
+  global rule set for every caller. New keys default to `default`, the
+  most restrictive baseline. Ships with a second `strict` policy so the
+  mechanism has something real to prove: the same call scores differently
+  depending on which key sent it.
+- `GET /v1/policies` lists the available policy ids.
+- API key lifecycle: `expires_in_days` at creation, `POST /v1/keys/rotate`
+  (mint a replacement, revoke the old one, no gap in validity), and
+  `POST /v1/keys/revoke` (immediate). Both require presenting the key
+  itself, proof of possession, not a separate admin path.
+- Per-agent identity: `context.agent_id` on `POST /v1/guard`, persisted on
+  `ToolCall.agent_name` and kept independent of `ToolCall.api_key_id`, so
+  one key fronting several agents doesn't collapse their audit trails into
+  one identity.
+
+### Fixed
+- SQLite drops timezone info on datetime round-trip; API key expiry checks
+  now normalize a naive `expires_at` back to UTC before comparing, rather
+  than raising.
+
 ## [0.2.0]
 
 ### Added

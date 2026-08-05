@@ -38,11 +38,14 @@ async def guard(
     user_request: str,
     history: list[dict[str, Any]],
     approval_timeout_seconds: int,
+    policy_id: str = "default",
+    api_key_id: str | None = None,
 ) -> ToolCall:
     call = ToolCall(
         id=str(uuid4()),
         session_id=session_id,
         agent_name=agent_name,
+        api_key_id=api_key_id,
         tool_name=tool_name,
         arguments=arguments,
         step_index=step_index,
@@ -59,6 +62,7 @@ async def guard(
             step_index=step_index,
             user_request=user_request,
             history=history,
+            policy_id=policy_id,
         )
         result = composite(
             rule_score=call.rule_score or 0.0,
@@ -126,6 +130,7 @@ async def _score(
     step_index: int,
     user_request: str,
     history: list[dict[str, Any]],
+    policy_id: str = "default",
 ) -> str | None:
     """Runs all three layers and writes their sub-scores onto `call`. Returns
     the forced verdict from the rule layer, if any, for the caller to pass
@@ -133,7 +138,7 @@ async def _score(
     tool = registry.require(tool_name)
     context = CallContext(tool=tool, arguments=arguments)
 
-    rules = load_rules()
+    rules = load_rules(policy_id)
     rule_outcome = evaluate(context, rules)
     call.rule_score = rule_outcome.score
     call.matched_rules = rule_outcome.matched_rule_ids
