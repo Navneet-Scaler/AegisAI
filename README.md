@@ -251,15 +251,38 @@ external caller never would either:
 - `examples/langchain/`: `guard_tool()` wraps any LangChain `BaseTool`. The result is a
   real `StructuredTool`, same name, description, and args schema, a drop-in replacement
   in an existing agent's tool list, not a new API to learn.
-- `examples/openai-function-calling/`: a plain OpenAI function-calling loop that calls
-  `/v1/guard` before executing any tool. `test_guard_client.py` in that folder exercises
-  the AegisAI side of it without needing an OpenAI key.
+- `examples/openai-function-calling/`: `agent.py` is a plain chat-completions
+  function-calling loop; `assistants_agent.py` is the Assistants API variant (thread and
+  run based, a structurally different tool-call shape, same guarding discipline). Both
+  call `/v1/guard` before executing any tool. `test_guard_client.py` exercises the
+  AegisAI side of it without needing an OpenAI key.
+
+One real, non-synthetic tool: every other tool in the demo (`aegis/tools/crm.py`) is an
+in-memory mock, safe and predictable but never actually intercepted mid-flight to
+anything with real latency or a real failure mode. `send_webhook_notification`
+(`aegis/tools/webhook.py`) makes a genuine outbound HTTPS request to
+[httpbin.org](https://httpbin.org), a public request-echoing sandbox built for exactly
+this, never a production third-party account, carrying an idempotency key the same way
+Stripe requires for anything that might be retried. Verified end to end against the real
+service: scored by `AegisAI.guard()`, allowed, executed, and it actually got a real HTTP
+200 back.
 
 The internal `AegisAI.guard()` (`aegis/aegisai/core.py`) is a different, higher-level
 thing: it owns execution too, running the tool itself on allow and blocking the caller's
 own request until a human decides on hold. That is what the ReAct agent and dashboard
 demo use internally. `/v1/guard` only scores, which is the right contract for a public
 API that has never seen your tool's implementation.
+
+## Exportable audit trail
+
+`GET /calls/export.csv` exports the audit trail as CSV: who, what, when, the decision,
+and the reasoning behind it, one row per call, timestamped and never mutated after the
+fact, the shape SOC 2 or ISO 27001 audit evidence typically expects. The live dashboard
+is for a human reviewing a hold right now; a compliance stakeholder wants a static,
+shareable artifact instead. Filterable by `agent_name`, `api_key_id`, `verdict`,
+`tool_name`, `since`, and `until`; public, like the rest of the read surface, since it has
+no side effects. The analytics page has an **Export audit trail** button that links here
+directly.
 
 ## Tech stack
 

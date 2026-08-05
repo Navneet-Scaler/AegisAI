@@ -1,5 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+export const apiUrl = (path: string) => `${API_URL}${path}`;
+
 export type Verdict = "allow" | "hold" | "block";
 export type CallStatus = "pending" | "resolved";
 
