@@ -8,7 +8,9 @@ client = TestClient(app)
 def test_health_reports_ok():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["checks"]["database"] == "ok"
 
 
 def test_cors_is_not_wildcard():

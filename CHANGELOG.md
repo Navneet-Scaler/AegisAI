@@ -4,6 +4,37 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.7.1]
+
+Foundation hardening surfaced by a close audit, applied before further outward-facing
+work: nothing here changes behaviour a user would notice on the happy path, all of it
+closes gaps a hostile read of the code found.
+
+### Fixed
+- `POST /calls/{id}/decide`: closed a race where two concurrent decisions on the same
+  held call could both pass the pending check before either committed, letting the
+  online learner train on the same feature vector with contradictory labels. Now a
+  single atomic `UPDATE ... WHERE status = pending`, so only one decision can ever win.
+- `AegisAI.guard()`: `executed` is now committed immediately after a tool call runs,
+  as its own transaction, instead of together with the resolve step that used to follow
+  it. A crash in that gap no longer leaves a call that genuinely executed looking
+  unresolved in the audit trail.
+- `/health` now actually checks the database and, in live mode, that a judge credential
+  is configured, instead of always returning `ok`.
+- The demo token bearer check now uses a constant-time comparison.
+- `GET /calls/export.csv` neutralizes leading `=`, `+`, `-`, `@` characters in
+  caller-controlled fields, closing a formula-injection path into Excel/Sheets.
+
+### Added
+- Structured logging on the backend's exception and startup paths, previously silent.
+- A startup reconciliation pass that resolves any call left `executed` but unresolved
+  by a prior crash, logged when it finds one.
+- The app now refuses to start in production with the default demo token, the same
+  fail-closed instinct already applied to SQLite-in-production.
+- A startup warning documenting that the in-process rate limiter's counters do not
+  survive a serverless cold start, so the advertised per-key limits are not actually
+  enforced on that deployment path.
+
 ## [0.7.0]
 
 ### Added
