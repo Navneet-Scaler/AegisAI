@@ -204,9 +204,16 @@ if one key fronts more than one agent (a support bot and a billing bot, say); it
 independently of the API key on every audit row, the same way OAuth keeps a client ID
 separate from a subject claim.
 
-Two runnable clients, neither of which imports this repo's own package, since an
+Four runnable integrations, none of which import this repo's own package, since an
 external caller never would either:
 - `scripts/demo.py`: mints a key and scores three example calls over plain HTTP.
+- `examples/mcp-server/`: an MCP server (the interop layer most agent hosts are
+  converging on) whose `tools/call` is scored by `/v1/guard` before it executes. Point
+  Claude Desktop, or any MCP client, at it instead of a bare tool server, no application
+  code changes. Implemented against the official MCP Python SDK, JSON-RPC 2.0 over stdio.
+- `examples/langchain/`: `guard_tool()` wraps any LangChain `BaseTool`. The result is a
+  real `StructuredTool`, same name, description, and args schema, a drop-in replacement
+  in an existing agent's tool list, not a new API to learn.
 - `examples/openai-function-calling/`: a plain OpenAI function-calling loop that calls
   `/v1/guard` before executing any tool. `test_guard_client.py` in that folder exercises
   the AegisAI side of it without needing an OpenAI key.
