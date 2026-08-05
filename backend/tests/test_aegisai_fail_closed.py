@@ -21,10 +21,10 @@ from aegis.models import CallStatus, ToolCall, Verdict
 
 
 async def test_rules_file_failure_holds_then_times_out_to_block(monkeypatch):
-    def broken_load_rules():
-        raise ValueError("rules.yaml is corrupt")
+    async def broken_get_active_rules(session, policy_id):
+        raise ValueError("policy file is corrupt")
 
-    monkeypatch.setattr("aegis.aegisai.core.load_rules", broken_load_rules)
+    monkeypatch.setattr("aegis.aegisai.core.get_active_rules", broken_get_active_rules)
 
     sessionmaker = get_sessionmaker()
 

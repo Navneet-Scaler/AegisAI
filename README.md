@@ -207,8 +207,22 @@ the tool, that stays entirely yours; it only decides.
 | `POST /v1/keys/rotate` | Mint a replacement key, revoke the presented one. Requires the key itself. |
 | `POST /v1/keys/revoke` | Immediately invalidate the presented key. Requires the key itself. |
 | `GET /v1/policies` | List the available policy ids. |
+| `GET /v1/policies/{id}/rules` | The policy's current active rules. |
+| `POST /v1/policies/{id}/dry-run` | Simulate proposed rules against recent history. No side effects. |
+| `POST /v1/policies/{id}/draft` | Save a new policy version. Requires the demo token. |
+| `POST /v1/policies/{id}/versions/{v}/activate` | Activate a version (rollback is activating an old one). |
 | `POST /v1/guard` | Score a call. Requires `Authorization: Bearer <key>`. 60 requests/minute per key. |
 | `GET /docs` | Interactive Swagger UI with a filled-in example for `/v1/guard`. |
+
+**Policies are edited, dry run, and activated, not overwritten in place.** Every save is a
+new version; every prior version stays on record, so rolling back is just activating an
+older one again, not reconstructing a lost file. Before committing to a change, dry run it:
+`POST /v1/policies/{id}/dry-run` re-evaluates proposed rules against the most recent
+resolved calls that were actually scored under that policy, and reports which ones would
+get a different forced verdict, the same "count mode before block mode" discipline a WAF
+uses before flipping a rule to block. The dashboard's **Edit policy** page wraps this in a
+JSON editor with a dry-run panel and a rollback-capable version history; the underlying
+endpoints work the same over plain HTTP for anyone who'd rather script it.
 
 **Every key is scoped to a policy**, not a single global rule set for every caller. Pass
 `policy_id` when minting a key (defaults to `default`, the most restrictive baseline);

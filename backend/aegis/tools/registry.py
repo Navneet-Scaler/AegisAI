@@ -74,6 +74,25 @@ class ToolRegistry:
 
 registry = ToolRegistry()
 
+# An external caller's tool is not in AegisAI's own registry and carries no
+# destructiveness hint in the public API's request schema. "write" is the
+# moderate default: not as trusting as "read", not as alarmist as
+# "destructive". Shared between the public scoring path and the policy
+# dry-run engine so both treat an unregistered tool name identically.
+_EXTERNAL_DEFAULT_DESTRUCTIVENESS: Destructiveness = "write"
+
+
+def resolve_or_external(tool_name: str) -> Tool:
+    known = registry.get(tool_name)
+    if known is not None:
+        return known
+    return Tool(
+        name=tool_name,
+        description="External tool, not in AegisAI's own registry.",
+        destructiveness=_EXTERNAL_DEFAULT_DESTRUCTIVENESS,
+        fn=lambda **_: None,
+    )
+
 
 def tool(
     *, destructiveness: Destructiveness, description: str
