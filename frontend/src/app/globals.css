@@ -98,6 +98,26 @@ body {
   border-radius: 3px;
 }
 
+/* Every button gets the same tactile press feedback for free, so pressing
+   Approve, Block, or a nav link all feel like the same physical surface. */
+button {
+  transition:
+    transform 0.12s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
 /*
   Motion here carries meaning, it is not decoration. When a reader has asked for
   less of it, every animation collapses to an instant state change.

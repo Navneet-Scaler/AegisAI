@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { Logo } from "@/components/brand/Logo";
 import { CodeBlock } from "@/components/landing/CodeBlock";
-import { InterceptGraphic } from "@/components/landing/InterceptGraphic";
 import { Nav } from "@/components/landing/Nav";
 import { PipelineDemo } from "@/components/landing/PipelineDemo";
 import { Reveal } from "@/components/landing/Reveal";
@@ -121,7 +120,7 @@ export default function Home() {
               </Reveal>
 
               <Reveal delay={0.12}>
-                <InterceptGraphic />
+                <PipelineDemo />
               </Reveal>
             </div>
           </div>
@@ -181,20 +180,6 @@ export default function Home() {
                 />
               </Reveal>
             </div>
-          </div>
-        </section>
-
-        {/* Live preview */}
-        <section className="border-b border-[var(--border)]">
-          <div className="mx-auto max-w-6xl px-6 py-16">
-            <Reveal>
-              <h2 className="text-sm font-mono uppercase tracking-widest text-[var(--text-faint)]">
-                What the feed looks like
-              </h2>
-            </Reveal>
-            <Reveal delay={0.08} className="mt-6">
-              <PipelineDemo />
-            </Reveal>
           </div>
         </section>
 
